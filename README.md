@@ -1,0 +1,1 @@
+# global-translation-hub-platform
