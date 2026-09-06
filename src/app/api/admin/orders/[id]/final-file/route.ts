@@ -1,0 +1,143 @@
+import { NextResponse } from "next/server";
+import { randomUUID } from "crypto";
+import { requireAdmin } from "@/lib/auth/require-admin";
+import { supabaseAdmin } from "@/lib/supabase/admin";
+
+export const runtime = "nodejs";
+
+const ALLOWED_TYPES = new Set([
+  "application/pdf",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+]);
+
+const MAX_FILE_SIZE = 25 * 1024 * 1024;
+
+function extensionForType(type: string) {
+  if (type === "application/pdf") return "pdf";
+
+  if (
+    type ===
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+  ) {
+    return "docx";
+  }
+
+  return null;
+}
+
+export async function POST(
+  request: Request,
+  context: { params: Promise<{ id: string }> }
+) {
+  const { user } = await requireAdmin();
+  const { id: orderId } = await context.params;
+
+  const formData = await request.formData();
+  const file = formData.get("file");
+
+  if (!(file instanceof File)) {
+    return NextResponse.json(
+      { ok: false, message: "A final translation file is required." },
+      { status: 400 }
+    );
+  }
+
+  if (!ALLOWED_TYPES.has(file.type)) {
+    return NextResponse.json(
+      {
+        ok: false,
+        message: "Only PDF and DOCX files are accepted.",
+      },
+      { status: 400 }
+    );
+  }
+
+  if (file.size <= 0 || file.size > MAX_FILE_SIZE) {
+    return NextResponse.json(
+      {
+        ok: false,
+        message: "The maximum permitted file size is 25 MB.",
+      },
+      { status: 400 }
+    );
+  }
+
+  const { data: order, error: orderError } = await supabaseAdmin
+    .from("orders")
+    .select("id, order_reference, enquiry_id")
+    .eq("id", orderId)
+    .maybeSingle();
+
+  if (orderError || !order) {
+    return NextResponse.json(
+      { ok: false, message: "Order not found." },
+      { status: 404 }
+    );
+  }
+
+  const extension = extensionForType(file.type);
+
+  if (!extension) {
+    return NextResponse.json(
+      { ok: false, message: "Unsupported file type." },
+      { status: 400 }
+    );
+  }
+
+  const storagePath = `${order.order_reference}/${randomUUID()}.${extension}`;
+  const arrayBuffer = await file.arrayBuffer();
+
+  const { error: uploadError } = await supabaseAdmin.storage
+    .from("order-final-files")
+    .upload(storagePath, arrayBuffer, {
+      contentType: file.type,
+      upsert: false,
+    });
+
+  if (uploadError) {
+    console.error(uploadError);
+
+    return NextResponse.json(
+      { ok: false, message: "Unable to store final translation." },
+      { status: 500 }
+    );
+  }
+
+  const { error: documentError } = await supabaseAdmin
+    .from("documents")
+    .insert({
+      enquiry_id: order.enquiry_id,
+      storage_path: storagePath,
+      original_filename: file.name,
+      mime_type: file.type,
+      file_size: file.size,
+      status: "final_translation",
+      expires_at: null,
+    });
+
+  if (documentError) {
+    await supabaseAdmin.storage
+      .from("order-final-files")
+      .remove([storagePath]);
+
+    return NextResponse.json(
+      { ok: false, message: "Unable to save final file metadata." },
+      { status: 500 }
+    );
+  }
+
+  await supabaseAdmin
+    .from("order_status_history")
+    .insert({
+      order_id: order.id,
+      previous_status: null,
+      new_status: "final_file_uploaded",
+      changed_by: user.id,
+      notes: "Final translation file uploaded through the administration panel.",
+    });
+
+  return NextResponse.json({
+    ok: true,
+    message: "Final translation uploaded successfully.",
+  });
+}

@@ -1,0 +1,334 @@
+"use client";
+
+import { Suspense, useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
+
+type FinalDocument = {
+  id: string;
+  original_filename: string | null;
+};
+
+type OrderData = {
+  reference: string;
+  status: string;
+  paidAt?: string;
+  sourceLanguage?: string;
+  targetLanguage?: string;
+  documentType?: string;
+  turnaround?: string;
+
+  finalDocuments?: FinalDocument[];
+
+  certificate?: {
+    status: string;
+    reference: string;
+    bundleAvailable: boolean;
+  } | null;
+};
+
+
+
+type ApiResponse = {
+  ok: boolean;
+  order?: OrderData;
+  message?: string;
+};
+
+function readableStatus(status?: string) {
+  if (!status) return "";
+
+  return status
+    .split("_")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
+}
+
+function OrderPortalContent() {
+  const searchParams = useSearchParams();
+  const token = searchParams.get("token");
+
+  const [data, setData] = useState<ApiResponse | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!token) {
+      setData({
+        ok: false,
+        message: "The secure order access token is missing.",
+      });
+      setLoading(false);
+      return;
+    }
+
+    async function loadOrder() {
+      try {
+        const response = await fetch(
+          `/api/client/order?token=${encodeURIComponent(token!)}`,
+          {
+            cache: "no-store",
+          }
+        );
+
+        const result: ApiResponse = await response.json();
+
+        setData(result);
+      } catch {
+        setData({
+          ok: false,
+          message: "Unable to retrieve your order.",
+        });
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    loadOrder();
+  }, [token]);
+
+  if (loading) {
+    return (
+      <main className="min-h-screen bg-[#f5f8f6] px-6 py-20 text-[#13201a]">
+        <div className="mx-auto max-w-3xl rounded-3xl border border-[#dce6df] bg-white p-10 shadow-sm">
+          <div className="text-sm font-semibold uppercase tracking-[0.18em] text-[#087f5b]">
+            GLOBAL TRANSLATION HUB
+          </div>
+
+          <h1 className="mt-4 text-3xl font-bold">
+            Loading your order
+          </h1>
+
+          <p className="mt-4 text-[#607067]">
+            Please wait while we retrieve your secure order details.
+          </p>
+        </div>
+      </main>
+    );
+  }
+
+  if (!data?.ok || !data.order) {
+    return (
+      <main className="min-h-screen bg-[#f5f8f6] px-6 py-20 text-[#13201a]">
+        <div className="mx-auto max-w-3xl rounded-3xl border border-[#ead9d6] bg-white p-10 shadow-sm">
+          <div className="inline-flex rounded-full bg-[#fff0ed] px-4 py-2 text-sm font-semibold text-[#9a3f2f]">
+            Secure Access Unavailable
+          </div>
+
+          <h1 className="mt-5 text-3xl font-bold">
+            We could not open this order
+          </h1>
+
+          <p className="mt-4 leading-7 text-[#607067]">
+            {data?.message ||
+              "This secure order link may be invalid, expired or unavailable."}
+          </p>
+
+          <a
+            href="/"
+            className="mt-8 inline-block rounded-xl bg-[#087f5b] px-6 py-3 font-semibold text-white"
+          >
+            Return to Home
+          </a>
+        </div>
+      </main>
+    );
+  }
+
+  const order = data.order;
+
+  return (
+    <main className="min-h-screen bg-[#f5f8f6] px-6 py-16 text-[#13201a]">
+      <div className="mx-auto max-w-4xl">
+        <div className="mb-8">
+          <div className="text-sm font-semibold uppercase tracking-[0.18em] text-[#087f5b]">
+            GLOBAL TRANSLATION HUB
+          </div>
+
+          <h1 className="mt-3 text-4xl font-bold">
+            Your Translation Order
+          </h1>
+
+          <p className="mt-4 text-[#607067]">
+            Secure order tracking and document delivery.
+          </p>
+        </div>
+
+        <section className="rounded-3xl border border-[#dce6df] bg-white p-8 shadow-sm">
+          <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <div className="text-sm text-[#69766f]">
+                Order Reference
+              </div>
+
+              <div className="mt-2 text-3xl font-bold tracking-wide text-[#087f5b]">
+                {order.reference}
+              </div>
+            </div>
+
+            <div className="inline-flex w-fit rounded-full bg-[#eaf8f0] px-4 py-2 text-sm font-semibold text-[#087f5b]">
+              {readableStatus(order.status)}
+            </div>
+          </div>
+
+          <dl className="mt-8 grid gap-6 border-t border-[#e6ece8] pt-8 sm:grid-cols-2">
+            <Info
+              label="Language Pair"
+              value={`${order.sourceLanguage ?? ""} → ${order.targetLanguage ?? ""}`}
+            />
+
+            <Info
+              label="Document Type"
+              value={order.documentType}
+            />
+
+            <Info
+              label="Turnaround"
+              value={order.turnaround}
+            />
+
+            <Info
+              label="Payment"
+              value="Confirmed"
+            />
+          </dl>
+
+          {order.paidAt && (
+            <p className="mt-8 text-sm text-[#69766f]">
+              Payment confirmed on{" "}
+              {new Date(order.paidAt).toLocaleString("en-GB")}
+            </p>
+          )}
+        </section>
+
+        <section className="mt-6 rounded-3xl border border-[#dce6df] bg-white p-8 shadow-sm">
+          <h2 className="text-xl font-bold">
+            Translation Delivery
+          </h2>
+        
+          <p className="mt-3 leading-7 text-[#607067]">
+            Your completed translation will become available
+            here once the order reaches the Ready stage.
+          </p>
+        
+          <div className="mt-6 rounded-2xl bg-[#f5f8f6] p-5 text-sm text-[#607067]">
+            Current status:{" "}
+            <strong className="text-[#13201a]">
+              {readableStatus(order.status)}
+            </strong>
+          </div>
+        
+          {["ready", "delivered"].includes(order.status) &&
+            order.finalDocuments &&
+            order.finalDocuments.length > 0 && (
+              <div className="mt-6 space-y-3">
+                {order.finalDocuments.map((document) => (
+                  <div
+                    key={document.id}
+                    className="flex flex-col gap-3 rounded-xl border border-[#dce6df] bg-white p-4 sm:flex-row sm:items-center sm:justify-between"
+                  >
+                    <div className="font-semibold">
+                      {document.original_filename ||
+                        "Completed Translation"}
+                    </div>
+        
+                    <a
+                      href={`/api/client/download?token=${encodeURIComponent(
+                        token!
+                      )}&document=${encodeURIComponent(
+                        document.id
+                      )}`}
+                      className="rounded-lg bg-[#087f5b] px-4 py-2 text-center text-sm font-semibold text-white"
+                    >
+                      Download Translation
+                    </a>
+                  </div>
+                ))}
+              </div>
+            )}
+        
+          {["ready", "delivered"].includes(order.status) &&
+            (!order.finalDocuments ||
+              order.finalDocuments.length === 0) && (
+              <div className="mt-6 rounded-xl bg-[#fff4d8] px-4 py-3 text-sm text-[#8a6418]">
+                The order is marked as ready, but no final
+                translation file is currently available.
+              </div>
+            )}
+        
+          {order.certificate?.bundleAvailable && (
+            <div className="mt-6 rounded-2xl border border-[#b9d8c7] bg-[#f3faf6] p-5">
+              <div className="text-sm text-[#65736b]">
+                Certified Translation Bundle
+              </div>
+        
+              <div className="mt-1 font-semibold">
+                {order.certificate.reference}
+              </div>
+        
+              <p className="mt-3 text-sm leading-6 text-[#607067]">
+                This PDF contains the Certificate of Translation Accuracy,
+                the completed translation and the source document copy.
+              </p>
+        
+              <a
+                href={`/api/client/bundle?token=${encodeURIComponent(
+                  token!
+                )}`}
+                className="mt-4 inline-flex rounded-lg bg-[#102b20] px-5 py-3 text-sm font-semibold text-white"
+              >
+                Download Certified Translation Bundle
+              </a>
+            </div>
+          )}
+        </section>
+        
+
+        <div className="mt-8 text-center">
+          <a
+            href="/"
+            className="text-sm font-semibold text-[#087f5b]"
+          >
+            Return to GLOBAL TRANSLATION HUB
+          </a>
+        </div>
+      </div>
+    </main>
+  );
+}
+
+function Info({
+  label,
+  value,
+}: {
+  label: string;
+  value?: string | null;
+}) {
+  return (
+    <div>
+      <dt className="text-sm text-[#69766f]">
+        {label}
+      </dt>
+
+      <dd className="mt-1 font-semibold">
+        {value || "Not available"}
+      </dd>
+    </div>
+  );
+}
+
+function LoadingFallback() {
+  return (
+    <main className="min-h-screen bg-[#f5f8f6] px-6 py-20">
+      <div className="mx-auto max-w-3xl rounded-3xl bg-white p-10">
+        Loading secure order...
+      </div>
+    </main>
+  );
+}
+
+export default function OrderPortalPage() {
+  return (
+    <Suspense fallback={<LoadingFallback />}>
+      <OrderPortalContent />
+    </Suspense>
+  );
+}

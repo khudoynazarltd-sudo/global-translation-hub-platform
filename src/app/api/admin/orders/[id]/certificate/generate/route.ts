@@ -1,0 +1,1238 @@
+import { NextResponse } from "next/server";
+import {
+  PDFDocument,
+  StandardFonts,
+  rgb,
+} from "pdf-lib";
+
+import fs from "fs/promises";
+import path from "path";
+
+import { requireAdmin } from "@/lib/auth/require-admin";
+import { supabaseAdmin } from "@/lib/supabase/admin";
+import QRCode from "qrcode";
+
+export const runtime = "nodejs";
+
+const A4_WIDTH = 595.28;
+const A4_HEIGHT = 841.89;
+
+function formatDate(value: string | null) {
+  if (!value) {
+    return "Not specified";
+  }
+
+  return new Date(
+    `${value}T00:00:00`
+  ).toLocaleDateString("en-GB", {
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+  });
+}
+
+function wrapText(
+  text: string,
+  font: any,
+  fontSize: number,
+  maxWidth: number
+) {
+  const words = text.split(/\s+/);
+  const lines: string[] = [];
+
+  let currentLine = "";
+
+  for (const word of words) {
+    const testLine = currentLine
+      ? `${currentLine} ${word}`
+      : word;
+
+    const width =
+      font.widthOfTextAtSize(
+        testLine,
+        fontSize
+      );
+
+    if (
+      width > maxWidth &&
+      currentLine
+    ) {
+      lines.push(currentLine);
+      currentLine = word;
+    } else {
+      currentLine = testLine;
+    }
+  }
+
+  if (currentLine) {
+    lines.push(currentLine);
+  }
+
+  return lines;
+}
+
+async function loadBrandingFile(
+  filename: string
+) {
+  const filePath = path.join(
+    process.cwd(),
+    "public",
+    "branding",
+    filename
+  );
+
+  return fs.readFile(filePath);
+}
+
+export async function POST(
+  _request: Request,
+  context: {
+    params: Promise<{ id: string }>;
+  }
+) {
+  await requireAdmin();
+
+  const { id: orderId } =
+    await context.params;
+
+  try {
+    const { data: order, error: orderError } =
+      await supabaseAdmin
+        .from("orders")
+        .select(`
+          id,
+          order_reference,
+          enquiry_id,
+          status
+        `)
+        .eq("id", orderId)
+        .maybeSingle();
+
+    if (orderError || !order) {
+      return NextResponse.json(
+        {
+          ok: false,
+          message: "Order not found.",
+        },
+        { status: 404 }
+      );
+    }
+
+    const {
+      data: certificate,
+      error: certificateError,
+    } = await supabaseAdmin
+      .from("certificates")
+      .select("*")
+      .eq("order_id", order.id)
+      .maybeSingle();
+
+    if (
+      certificateError ||
+      !certificate
+    ) {
+      return NextResponse.json(
+        {
+          ok: false,
+          message:
+            "Certificate not found.",
+        },
+        { status: 404 }
+      );
+    }
+
+    if (
+      !["approved", "issued"].includes(
+        certificate.status
+      )
+    ) {
+      return NextResponse.json(
+        {
+          ok: false,
+          message:
+            "The certificate must be approved before a certified bundle can be generated.",
+        },
+        { status: 400 }
+      );
+    }
+    const {
+      data: finalDocuments,
+      error: finalDocumentsError,
+    } = await supabaseAdmin
+      .from("documents")
+      .select(`
+        id,
+        storage_path,
+        original_filename,
+        mime_type
+      `)
+      .eq(
+        "enquiry_id",
+        order.enquiry_id
+      )
+      .eq(
+        "status",
+        "final_translation"
+      );
+
+    if (finalDocumentsError) {
+      throw new Error(
+        "Unable to retrieve final translation files."
+      );
+    }
+
+    const finalPdf =
+      (finalDocuments ?? []).find(
+        (document) =>
+          document.mime_type ===
+          "application/pdf"
+      );
+
+    if (!finalPdf) {
+      return NextResponse.json(
+        {
+          ok: false,
+          message:
+            "A final translation in PDF format is required before generating the certified bundle.",
+        },
+        { status: 400 }
+      );
+    }
+
+    const {
+      data: sourceDocuments,
+      error: sourceDocumentsError,
+    } = await supabaseAdmin
+      .from("documents")
+      .select(`
+        id,
+        storage_path,
+        original_filename,
+        mime_type
+      `)
+      .eq(
+        "enquiry_id",
+        order.enquiry_id
+      )
+      .eq(
+        "status",
+        "order_source"
+      );
+
+    if (sourceDocumentsError) {
+      throw new Error(
+        "Unable to retrieve source documents."
+      );
+    }
+
+    const {
+      data: finalFileData,
+      error: finalDownloadError,
+    } =
+      await supabaseAdmin.storage
+        .from("order-final-files")
+        .download(
+          finalPdf.storage_path
+        );
+
+    if (
+      finalDownloadError ||
+      !finalFileData
+    ) {
+      throw new Error(
+        "Unable to download the final translation."
+      );
+    }
+
+    const outputDocument =
+      await PDFDocument.create();
+
+    const regularFont =
+      await outputDocument.embedFont(
+        StandardFonts.Helvetica
+      );
+
+    const boldFont =
+      await outputDocument.embedFont(
+        StandardFonts.HelveticaBold
+      );
+
+    const logoBytes =
+      await loadBrandingFile(
+        "gth-logo.png"
+      );
+
+    const watermarkBytes =
+      await loadBrandingFile(
+        "gth-watermark.png"
+      );
+
+    const ciolBytes =
+      await loadBrandingFile(
+        "ciol-member-mark.png"
+      );
+
+    const signatureBytes =
+      await loadBrandingFile(
+        "signature.png"
+      );
+    
+    const stampBytes =
+      await loadBrandingFile(
+        "company-stamp.png"
+      );
+
+    const logo =
+      await outputDocument.embedPng(
+        logoBytes
+      );
+
+    const watermark =
+      await outputDocument.embedPng(
+        watermarkBytes
+      );
+
+    const ciol =
+      await outputDocument.embedPng(
+        ciolBytes
+      );
+
+    const signature =
+      await outputDocument.embedPng(
+        signatureBytes
+      );
+    
+    const stamp =
+      await outputDocument.embedPng(
+        stampBytes
+      );
+
+    const siteUrl =
+      process.env.NEXT_PUBLIC_SITE_URL ||
+      "http://localhost:3000";
+    
+    const verificationUrl =
+      `${siteUrl.replace(/\/$/, "")}` +
+      `/verify?reference=${encodeURIComponent(
+        certificate.certificate_reference
+      )}`;
+    
+    const qrDataUrl =
+      await QRCode.toDataURL(
+        verificationUrl,
+        {
+          errorCorrectionLevel: "M",
+          margin: 1,
+          width: 400,
+    
+          color: {
+            dark: "#102B20",
+            light: "#FFFFFF",
+          },
+        }
+      );
+    
+    const qrBase64 =
+      qrDataUrl.split(",")[1];
+    
+    if (!qrBase64) {
+      throw new Error(
+        "Unable to generate certificate verification QR code."
+      );
+    }
+    
+    const qrBytes =
+      Buffer.from(
+        qrBase64,
+        "base64"
+      );
+    
+    const qrImage =
+      await outputDocument.embedPng(
+        qrBytes
+      );
+
+    /*
+      PAGE 1
+      Certificate of Translation Accuracy
+    */
+
+    const page =
+      outputDocument.addPage([
+        A4_WIDTH,
+        A4_HEIGHT,
+      ]);
+
+    const watermarkScale =
+      Math.min(
+        470 / watermark.width,
+        470 / watermark.height
+      );
+
+    page.drawImage(watermark, {
+      x:
+        (A4_WIDTH -
+          watermark.width *
+            watermarkScale) /
+        2,
+
+      y: 180,
+
+      width:
+        watermark.width *
+        watermarkScale,
+
+      height:
+        watermark.height *
+        watermarkScale,
+
+      opacity: 0.07,
+    });
+
+    const logoScale =
+      Math.min(
+        145 / logo.width,
+        105 / logo.height
+      );
+
+    page.drawImage(logo, {
+      x: 35,
+      y: 720,
+
+      width:
+        logo.width * logoScale,
+
+      height:
+        logo.height * logoScale,
+    });
+
+    const ciolScale =
+      Math.min(
+        115 / ciol.width,
+        105 / ciol.height
+      );
+
+    page.drawImage(ciol, {
+      x:
+        A4_WIDTH -
+        ciol.width * ciolScale -
+        35,
+
+      y: 720,
+
+      width:
+        ciol.width * ciolScale,
+
+      height:
+        ciol.height * ciolScale,
+    });
+
+    page.drawText(
+      "KHUDOYNAZAR LTD",
+      {
+        x: 224,
+        y: 790,
+        size: 11,
+        font: boldFont,
+      }
+    );
+
+    page.drawText(
+      "trading as",
+      {
+        x: 263,
+        y: 775,
+        size: 8,
+        font: regularFont,
+      }
+    );
+
+    page.drawText(
+      "GLOBAL TRANSLATION HUB",
+      {
+        x: 216,
+        y: 758,
+        size: 10,
+        font: boldFont,
+      }
+    );
+
+    page.drawText(
+      "6 Lyndewode Road, Cambridge, CB1 2HL",
+      {
+        x: 203,
+        y: 739,
+        size: 7.5,
+        font: regularFont,
+      }
+    );
+
+    page.drawText(
+      "United Kingdom",
+      {
+        x: 263,
+        y: 727,
+        size: 7.5,
+        font: regularFont,
+      }
+    );
+
+
+    const signatureScale =
+      Math.min(
+        150 / signature.width,
+        55 / signature.height
+      );
+    
+    page.drawImage(signature, {
+      x: 55,
+      y: 92,
+    
+      width:
+        signature.width *
+        signatureScale,
+    
+      height:
+        signature.height *
+        signatureScale,
+    });
+
+    const stampScale =
+      Math.min(
+        105 / stamp.width,
+        105 / stamp.height
+      );
+    
+    page.drawImage(stamp, {
+      x:
+        A4_WIDTH -
+        stamp.width *
+          stampScale -
+        34,
+    
+      y: 78,
+    
+      width:
+        stamp.width *
+        stampScale,
+    
+      height:
+        stamp.height *
+        stampScale,
+    
+      opacity: 0.92,
+    });
+
+    page.drawLine({
+      start: {
+        x: 42,
+        y: 705,
+      },
+
+      end: {
+        x: A4_WIDTH - 42,
+        y: 705,
+      },
+
+      thickness: 0.8,
+
+      color: rgb(
+        0.13,
+        0.2,
+        0.16
+      ),
+    });
+
+    page.drawText(
+      "CERTIFICATE OF TRANSLATION ACCURACY",
+      {
+        x: 92,
+        y: 665,
+        size: 18,
+        font: boldFont,
+
+        color: rgb(
+          0.03,
+          0.5,
+          0.35
+        ),
+      }
+    );
+
+    const infoRows: Array<
+      [string, string]
+    > = [
+      [
+        "Certificate Reference",
+        certificate.certificate_reference,
+      ],
+
+      [
+        "Order Reference",
+        order.order_reference,
+      ],
+
+      [
+        "Client Name",
+        certificate.client_name ??
+          "Not specified",
+      ],
+
+      [
+        "Document Title",
+        certificate.document_title ??
+          "Not specified",
+      ],
+
+      [
+        "Source Language",
+        certificate.source_language,
+      ],
+
+      [
+        "Target Language",
+        certificate.target_language,
+      ],
+
+      [
+        "Number of Pages",
+        String(
+          certificate.number_of_pages ??
+            1
+        ),
+      ],
+
+      [
+        "Date Assigned",
+        formatDate(
+          certificate.date_assigned
+        ),
+      ],
+
+      [
+        "Date Returned",
+        formatDate(
+          certificate.date_returned
+        ),
+      ],
+
+      [
+        "Certification Date",
+        formatDate(
+          certificate.certification_date
+        ),
+      ],
+    ];
+
+    let infoY = 625;
+
+    for (
+      let index = 0;
+      index < infoRows.length;
+      index++
+    ) {
+      const [label, value] =
+        infoRows[index];
+
+      const column =
+        index % 2;
+
+      const row =
+        Math.floor(index / 2);
+
+      const x =
+        column === 0
+          ? 48
+          : 315;
+
+      const y =
+        infoY -
+        row * 37;
+
+      page.drawText(label, {
+        x,
+        y,
+        size: 7.5,
+        font: regularFont,
+
+        color: rgb(
+          0.38,
+          0.44,
+          0.4
+        ),
+      });
+
+      page.drawText(value, {
+        x,
+        y: y - 13,
+        size: 9.5,
+        font: boldFont,
+      });
+    }
+
+    let y = 425;
+
+    page.drawText(
+      "CERTIFICATION STATEMENT",
+      {
+        x: 48,
+        y,
+        size: 11,
+        font: boldFont,
+      }
+    );
+
+    y -= 22;
+
+    const statementLines =
+      wrapText(
+        certificate.certification_statement ??
+          "",
+        regularFont,
+        9.5,
+        495
+      );
+
+    for (
+      const line of statementLines
+    ) {
+      page.drawText(line, {
+        x: 48,
+        y,
+        size: 9.5,
+        font: regularFont,
+      });
+
+      y -= 14;
+    }
+
+    y -= 16;
+
+    page.drawText(
+      "SOURCE DOCUMENT DISCLAIMER",
+      {
+        x: 48,
+        y,
+        size: 10,
+        font: boldFont,
+      }
+    );
+
+    y -= 20;
+
+    const disclaimer =
+      "This certification relates solely to the accuracy of the translation. " +
+      "GLOBAL TRANSLATION HUB / KHUDOYNAZAR LTD does not certify, authenticate " +
+      "or verify the authenticity, validity, provenance or legal effect of the " +
+      "source document supplied by the client.";
+
+    const disclaimerLines =
+      wrapText(
+        disclaimer,
+        regularFont,
+        8.5,
+        495
+      );
+
+    for (
+      const line of disclaimerLines
+    ) {
+      page.drawText(line, {
+        x: 48,
+        y,
+        size: 8.5,
+        font: regularFont,
+
+        color: rgb(
+          0.18,
+          0.24,
+          0.2
+        ),
+      });
+
+      y -= 12;
+    }
+
+    y -= 20;
+
+    page.drawText(
+      "Translator",
+      {
+        x: 48,
+        y,
+        size: 7.5,
+        font: regularFont,
+
+        color: rgb(
+          0.38,
+          0.44,
+          0.4
+        ),
+      }
+    );
+
+    page.drawText(
+      "Dr Zulfiyor Bakhtiyorov ACIL",
+      {
+        x: 48,
+        y: y - 14,
+        size: 10,
+        font: boldFont,
+      }
+    );
+
+    page.drawText(
+      "Associate Member of the Chartered Institute of Linguists",
+      {
+        x: 48,
+        y: y - 29,
+        size: 8,
+        font: regularFont,
+      }
+    );
+
+    page.drawText(
+      "CIOL Membership No. 95203",
+      {
+        x: 48,
+        y: y - 41,
+        size: 8,
+        font: regularFont,
+      }
+    );
+
+    page.drawText(
+      "For and on behalf of",
+      {
+        x: 330,
+        y,
+        size: 7.5,
+        font: regularFont,
+
+        color: rgb(
+          0.38,
+          0.44,
+          0.4
+        ),
+      }
+    );
+
+    page.drawText(
+      "GLOBAL TRANSLATION HUB",
+      {
+        x: 330,
+        y: y - 14,
+        size: 10,
+        font: boldFont,
+      }
+    );
+
+    page.drawText(
+      "KHUDOYNAZAR LTD",
+      {
+        x: 330,
+        y: y - 29,
+        size: 8,
+        font: regularFont,
+      }
+    );
+
+    page.drawText(
+      "Company No. 16122617",
+      {
+        x: 330,
+        y: y - 41,
+        size: 8,
+        font: regularFont,
+      }
+    );
+
+    page.drawLine({
+      start: {
+        x: 48,
+        y: 86,
+      },
+
+      end: {
+        x: 240,
+        y: 86,
+      },
+
+      thickness: 0.8,
+
+      color: rgb(
+        0.1,
+        0.1,
+        0.1
+      ),
+    });
+
+    page.drawText(
+      "Signature",
+      {
+        x: 48,
+        y: 70,
+        size: 8,
+        font: regularFont,
+      }
+    );
+
+    const qrSize = 56;
+    
+    const qrX =
+      (A4_WIDTH - qrSize) / 2;
+    
+    const qrY = 34;
+    
+    page.drawImage(qrImage, {
+      x: qrX,
+      y: qrY,
+    
+      width: qrSize,
+      height: qrSize,
+    });
+    
+    const qrLabel =
+      "SCAN TO VERIFY";
+    
+    const qrLabelWidth =
+      boldFont.widthOfTextAtSize(
+        qrLabel,
+        6.5
+      );
+    
+    page.drawText(
+      qrLabel,
+      {
+        x:
+          (A4_WIDTH - qrLabelWidth) /
+          2,
+    
+        y: 22,
+    
+        size: 6.5,
+        font: boldFont,
+    
+        color: rgb(
+          0.03,
+          0.5,
+          0.35
+        ),
+      }
+    );
+    page.drawText(
+      `Certificate Verification Reference: ${certificate.certificate_reference}`,
+      {
+        x: 48,
+        y: 42,
+        size: 7.5,
+        font: regularFont,
+
+        color: rgb(
+          0.32,
+          0.38,
+          0.34
+        ),
+      }
+    );
+
+    /*
+      PAGES 2-X
+      Final Translation PDF
+    */
+
+    const finalPdfBytes =
+      new Uint8Array(
+        await finalFileData.arrayBuffer()
+      );
+
+    const finalTranslationPdf =
+      await PDFDocument.load(
+        finalPdfBytes
+      );
+
+    const finalPageIndices =
+      finalTranslationPdf.getPageIndices();
+
+    const copiedFinalPages =
+      await outputDocument.copyPages(
+        finalTranslationPdf,
+        finalPageIndices
+      );
+
+    for (
+      let index = 0;
+      index < copiedFinalPages.length;
+      index++
+    ) {
+      const copiedPage =
+        copiedFinalPages[index];
+    
+      const {
+        width,
+        height,
+      } = copiedPage.getSize();
+    
+      const pageStampScale =
+        Math.min(
+          78 / stamp.width,
+          78 / stamp.height
+        );
+    
+      copiedPage.drawImage(stamp, {
+        x:
+          width -
+          stamp.width *
+            pageStampScale -
+          28,
+    
+        y: 24,
+    
+        width:
+          stamp.width *
+          pageStampScale,
+    
+        height:
+          stamp.height *
+          pageStampScale,
+    
+        opacity: 0.9,
+      });
+    
+   
+      outputDocument.addPage(
+        copiedPage
+      );
+    }
+
+    /*
+      LAST PAGES
+      Source documents
+    */
+
+    for (
+      const sourceDocument of
+      sourceDocuments ?? []
+    ) {
+      const {
+        data: sourceFileData,
+        error: sourceDownloadError,
+      } =
+        await supabaseAdmin.storage
+          .from(
+            "order-source-files"
+          )
+          .download(
+            sourceDocument.storage_path
+          );
+
+      if (
+        sourceDownloadError ||
+        !sourceFileData
+      ) {
+        throw new Error(
+          `Unable to download source document ${sourceDocument.id}.`
+        );
+      }
+
+      const sourceBytes =
+        new Uint8Array(
+          await sourceFileData.arrayBuffer()
+        );
+
+      if (
+        sourceDocument.mime_type ===
+        "application/pdf"
+      ) {
+        const sourcePdf =
+          await PDFDocument.load(
+            sourceBytes
+          );
+
+        const sourcePageIndices =
+          sourcePdf.getPageIndices();
+
+        const copiedSourcePages =
+          await outputDocument.copyPages(
+            sourcePdf,
+            sourcePageIndices
+          );
+
+        for (
+          const copiedPage of
+          copiedSourcePages
+        ) {
+          outputDocument.addPage(
+            copiedPage
+          );
+        }
+
+        continue;
+      }
+
+      if (
+        sourceDocument.mime_type ===
+          "image/jpeg" ||
+        sourceDocument.mime_type ===
+          "image/png"
+      ) {
+        const image =
+          sourceDocument.mime_type ===
+          "image/png"
+            ? await outputDocument.embedPng(
+                sourceBytes
+              )
+            : await outputDocument.embedJpg(
+                sourceBytes
+              );
+
+        const imagePage =
+          outputDocument.addPage([
+            A4_WIDTH,
+            A4_HEIGHT,
+          ]);
+
+        const maxWidth =
+          A4_WIDTH - 70;
+
+        const maxHeight =
+          A4_HEIGHT - 70;
+
+        const scale =
+          Math.min(
+            maxWidth / image.width,
+            maxHeight / image.height,
+            1
+          );
+
+        const imageWidth =
+          image.width * scale;
+
+        const imageHeight =
+          image.height * scale;
+
+        imagePage.drawImage(
+          image,
+          {
+            x:
+              (A4_WIDTH -
+                imageWidth) /
+              2,
+
+            y:
+              (A4_HEIGHT -
+                imageHeight) /
+              2,
+
+            width:
+              imageWidth,
+
+            height:
+              imageHeight,
+          }
+        );
+
+        continue;
+      }
+
+      throw new Error(
+        `Unsupported source document format: ${sourceDocument.mime_type}`
+      );
+    }
+
+    const bundleBytes =
+      await outputDocument.save();
+
+    const storagePath =
+      `${order.order_reference}/` +
+      `${order.order_reference}-Certified-Translation.pdf`;
+
+    /*
+      If an older bundle exists for this certificate,
+      overwrite the approved bundle.
+    */
+
+    const {
+      error: uploadError,
+    } =
+      await supabaseAdmin.storage
+        .from("certified-bundles")
+        .upload(
+          storagePath,
+          bundleBytes,
+          {
+            contentType:
+              "application/pdf",
+
+            upsert: true,
+          }
+        );
+
+    if (uploadError) {
+      console.error(
+        "Certified bundle upload failed:",
+        uploadError
+      );
+
+      throw new Error(
+        "Unable to store certified bundle."
+      );
+    }
+
+    const {
+      data: issuedCertificate,
+      error: updateError,
+    } = await supabaseAdmin
+      .from("certificates")
+      .update({
+        status: "issued",
+
+        bundle_storage_path:
+          storagePath,
+
+        updated_at:
+          new Date().toISOString(),
+      })
+      .eq(
+        "id",
+        certificate.id
+      )
+      .select("*")
+      .single();
+
+    if (
+      updateError ||
+      !issuedCertificate
+    ) {
+      throw new Error(
+        "Unable to update certificate record."
+      );
+    }
+
+    return NextResponse.json({
+      ok: true,
+
+      certificate:
+        issuedCertificate,
+
+      storagePath,
+    });
+  } catch (error) {
+    console.error(
+      "Certified bundle generation failed:",
+      error
+    );
+
+    return NextResponse.json(
+      {
+        ok: false,
+
+        message:
+          error instanceof Error
+            ? error.message
+            : "Unable to generate certified bundle.",
+      },
+      { status: 500 }
+    );
+  }
+}
