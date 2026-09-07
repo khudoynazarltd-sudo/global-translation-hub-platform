@@ -33,13 +33,19 @@ export default async function AdminEnquiriesPage() {
 
         <div className="mt-8 space-y-4">
           {(enquiries ?? []).map((item) => (
-            <div
-              key={item.id}
-              className="rounded-2xl border border-[#dce6df] bg-white p-6 shadow-sm"
-            >
-              <div className="font-bold">
-                {item.document_type}
-              </div>
+          <a
+            key={item.id}
+            href={`/admin/enquiries/${item.id}`}
+            className="block rounded-2xl border border-[#dce6df] bg-white p-6 shadow-sm transition hover:border-[#9db9a8] hover:shadow-md"
+          >
+
+            <div className="flex items-start justify-between gap-5">
+
+              <div>
+
+                <div className="font-bold">
+                  {item.document_type}
+                </div>
 
               <div className="mt-2 text-sm text-[#607067]">
                 {item.full_name} · {item.email}
@@ -53,7 +59,17 @@ export default async function AdminEnquiriesPage() {
               <div className="mt-2 text-sm">
                 Status: {item.status}
               </div>
+
             </div>
+
+
+            <div className="shrink-0 font-semibold text-[#087f5b]">
+              Open Enquiry →
+            </div>
+
+          </div>
+
+        </a>
           ))}
 
           {(enquiries ?? []).length === 0 && (

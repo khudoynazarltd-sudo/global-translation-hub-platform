@@ -1,0 +1,425 @@
+"use client";
+
+import {
+  useState,
+} from "react";
+
+import {
+  useRouter,
+} from "next/navigation";
+
+
+export default function ManualReviewActions({
+  enquiryId,
+  currentPrice,
+  currentTurnaround,
+  currentNotes,
+}: {
+  enquiryId: string;
+  currentPrice: number | null;
+  currentTurnaround: string | null;
+  currentNotes: string | null;
+}) {
+  const router =
+    useRouter();
+
+  const [price, setPrice] =
+    useState(
+      currentPrice != null
+        ? String(currentPrice)
+        : ""
+    );
+
+  const [
+    turnaround,
+    setTurnaround,
+  ] =
+    useState(
+      currentTurnaround ||
+        "Standard"
+    );
+
+  const [notes, setNotes] =
+    useState(
+      currentNotes || ""
+    );
+
+  const [
+    checkoutUrl,
+    setCheckoutUrl,
+  ] =
+    useState("");
+
+  const [saving, setSaving] =
+    useState(false);
+
+  const [message, setMessage] =
+    useState("");
+
+  const [
+    errorMessage,
+    setErrorMessage,
+  ] =
+    useState("");
+
+  const [copied, setCopied] =
+    useState(false);
+
+
+  async function saveReview() {
+    setSaving(true);
+    setMessage("");
+    setErrorMessage("");
+
+    try {
+      const response =
+        await fetch(
+          `/api/admin/enquiries/${enquiryId}/review`,
+          {
+            method: "POST",
+
+            headers: {
+              "Content-Type":
+                "application/json",
+            },
+
+            body: JSON.stringify({
+              price,
+              turnaround,
+              notes,
+            }),
+          }
+        );
+
+
+      const data =
+        await response.json();
+
+
+      if (
+        !response.ok ||
+        !data.ok
+      ) {
+        throw new Error(
+          data.message ||
+            "Unable to save review."
+        );
+      }
+
+
+      setMessage(
+        "Manual review saved."
+      );
+
+      router.refresh();
+
+      return true;
+
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error
+          ? error.message
+          : "Unable to save review."
+      );
+
+      return false;
+
+    } finally {
+      setSaving(false);
+    }
+  }
+
+
+  async function createPaymentLink() {
+    setSaving(true);
+    setMessage("");
+    setErrorMessage("");
+    setCheckoutUrl("");
+    setCopied(false);
+
+    try {
+      const reviewResponse =
+        await fetch(
+          `/api/admin/enquiries/${enquiryId}/review`,
+          {
+            method: "POST",
+
+            headers: {
+              "Content-Type":
+                "application/json",
+            },
+
+            body: JSON.stringify({
+              price,
+              turnaround,
+              notes,
+            }),
+          }
+        );
+
+
+      const reviewData =
+        await reviewResponse.json();
+
+
+      if (
+        !reviewResponse.ok ||
+        !reviewData.ok
+      ) {
+        throw new Error(
+          reviewData.message ||
+            "Unable to save review."
+        );
+      }
+
+
+      const checkoutResponse =
+        await fetch(
+          "/api/checkout",
+          {
+            method: "POST",
+
+            headers: {
+              "Content-Type":
+                "application/json",
+            },
+
+            body: JSON.stringify({
+              enquiryId,
+            }),
+          }
+        );
+
+
+      const checkoutData =
+        await checkoutResponse.json();
+
+
+      if (
+        !checkoutResponse.ok ||
+        !checkoutData.ok ||
+        !checkoutData.checkoutUrl
+      ) {
+        throw new Error(
+          checkoutData.message ||
+            "Unable to create payment link."
+        );
+      }
+
+
+      setCheckoutUrl(
+        checkoutData.checkoutUrl
+      );
+
+      setMessage(
+        "Quotation approved and payment link created."
+      );
+
+      router.refresh();
+
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error
+          ? error.message
+          : "Unable to create payment link."
+      );
+
+    } finally {
+      setSaving(false);
+    }
+  }
+
+
+  async function copyLink() {
+    if (!checkoutUrl) {
+      return;
+    }
+
+    await navigator.clipboard
+      .writeText(
+        checkoutUrl
+      );
+
+    setCopied(true);
+  }
+
+
+  return (
+    <section className="mt-6 rounded-2xl border border-[#dce6df] bg-white p-6 shadow-sm">
+
+      <h2 className="text-xl font-bold">
+        Manual Review & Quotation
+      </h2>
+
+      <p className="mt-2 text-sm leading-6 text-[#69766f]">
+        Review the source documents, confirm the
+        quotation and prepare the secure payment link.
+      </p>
+
+
+      <div className="mt-6 grid gap-5 sm:grid-cols-2">
+
+        <div>
+
+          <label className="mb-2 block text-sm font-semibold">
+            Final Price (£)
+          </label>
+
+          <input
+            type="number"
+            min="0.01"
+            step="0.01"
+            value={price}
+            onChange={(event) =>
+              setPrice(
+                event.target.value
+              )
+            }
+            className="w-full rounded-xl border border-[#d7e1da] px-4 py-3 outline-none focus:border-[#087f5b]"
+          />
+
+        </div>
+
+
+        <div>
+
+          <label className="mb-2 block text-sm font-semibold">
+            Turnaround
+          </label>
+
+          <select
+            value={turnaround}
+            onChange={(event) =>
+              setTurnaround(
+                event.target.value
+              )
+            }
+            className="w-full rounded-xl border border-[#d7e1da] bg-white px-4 py-3"
+          >
+
+            <option value="Standard">
+              Standard
+            </option>
+
+            <option value="Priority">
+              Priority
+            </option>
+
+          </select>
+
+        </div>
+
+      </div>
+
+
+      <div className="mt-5">
+
+        <label className="mb-2 block text-sm font-semibold">
+          Internal Admin Notes
+        </label>
+
+        <textarea
+          value={notes}
+          onChange={(event) =>
+            setNotes(
+              event.target.value
+            )
+          }
+          rows={5}
+          className="w-full rounded-xl border border-[#d7e1da] px-4 py-3 outline-none focus:border-[#087f5b]"
+        />
+
+        <p className="mt-2 text-xs text-[#69766f]">
+          Internal notes are not shown to the client.
+        </p>
+
+      </div>
+
+
+      <div className="mt-6 flex flex-wrap gap-3">
+
+        <button
+          type="button"
+          disabled={saving}
+          onClick={saveReview}
+          className="rounded-xl border border-[#087f5b] px-6 py-3 font-semibold text-[#087f5b] disabled:opacity-50"
+        >
+          {saving
+            ? "Saving..."
+            : "Save Review"}
+        </button>
+
+
+        <button
+          type="button"
+          disabled={saving}
+          onClick={
+            createPaymentLink
+          }
+          className="rounded-xl bg-[#087f5b] px-6 py-3 font-semibold text-white disabled:opacity-50"
+        >
+          {saving
+            ? "Processing..."
+            : "Approve & Create Payment Link"}
+        </button>
+
+      </div>
+
+
+      {message && (
+        <div className="mt-5 rounded-xl bg-[#eaf8f0] px-4 py-3 text-sm font-medium text-[#087f5b]">
+          {message}
+        </div>
+      )}
+
+
+      {errorMessage && (
+        <div className="mt-5 rounded-xl bg-[#fff0ed] px-4 py-3 text-sm text-[#9a3f2f]">
+          {errorMessage}
+        </div>
+      )}
+
+
+      {checkoutUrl && (
+        <div className="mt-6 rounded-2xl border border-[#b9d8c7] bg-[#fafcfb] p-5">
+
+          <div className="text-sm font-semibold text-[#087f5b]">
+            Payment Link Ready
+          </div>
+
+
+          <div className="mt-3 break-all rounded-xl bg-white p-4 text-sm">
+            {checkoutUrl}
+          </div>
+
+
+          <div className="mt-4 flex flex-wrap gap-3">
+
+            <button
+              type="button"
+              onClick={copyLink}
+              className="rounded-xl border border-[#087f5b] px-5 py-3 font-semibold text-[#087f5b]"
+            >
+              {copied
+                ? "Copied"
+                : "Copy Payment Link"}
+            </button>
+
+
+            <a
+              href={checkoutUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="rounded-xl bg-[#102b20] px-5 py-3 font-semibold text-white"
+            >
+              Open Payment Page
+            </a>
+
+          </div>
+
+        </div>
+      )}
+
+    </section>
+  );
+}

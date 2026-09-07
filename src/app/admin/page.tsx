@@ -1,4 +1,4 @@
-import { requireAdmin } from "@/lib/auth/require-admin";
+﻿import { requireAdmin } from "@/lib/auth/require-admin";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
@@ -56,6 +56,29 @@ export default async function AdminDashboardPage() {
       ),
   ]);
 
+    const {
+      count: activeTranslatorsCount,
+      error: translatorsCountError,
+    } = await supabaseAdmin
+      .from("translators")
+      .select(
+        "id",
+        {
+          count: "exact",
+          head: true,
+        }
+      )
+      .eq(
+        "active",
+        true
+      );
+
+    if (translatorsCountError) {
+      console.error(
+        "Unable to count active translators:",
+        translatorsCountError
+      );
+    }
 
   return (
     <main className="min-h-screen bg-[#f5f8f6] text-[#13201a]">
@@ -96,26 +119,60 @@ export default async function AdminDashboardPage() {
         </div>
 
 
-        <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-          <DashboardCard
-            title="Paid Orders"
-            value={paidOrders ?? 0}
-          />
+        <div className="mt-10 grid gap-5 sm:grid-cols-2 xl:grid-cols-5">
 
-          <DashboardCard
-            title="Manual Review"
-            value={manualReview ?? 0}
-          />
+          <a
+            href="/admin/orders"
+            className="block transition hover:-translate-y-0.5"
+          >
+            <DashboardCard
+              title="Orders"
+              value={paidOrders ?? 0}
+            />
+          </a>
 
-          <DashboardCard
-            title="In Translation"
-            value={inTranslation ?? 0}
-          />
 
-          <DashboardCard
-            title="Quality Check"
-            value={qualityCheck ?? 0}
-          />
+          <a
+            href="/admin/enquiries"
+            className="block transition hover:-translate-y-0.5"
+          >
+            <DashboardCard
+              title="Manual Review"
+              value={manualReview ?? 0}
+            />
+          </a>
+
+
+          <a
+            href="/admin/orders?status=in_translation"
+            className="block transition hover:-translate-y-0.5"
+          >
+            <DashboardCard
+              title="In Translation"
+              value={inTranslation ?? 0}
+            />
+          </a>
+
+          <a
+            href="/admin/orders?status=quality_check"
+            className="block transition hover:-translate-y-0.5"
+          >
+            <DashboardCard
+              title="Quality Check"
+              value={qualityCheck ?? 0}
+            />
+          </a>
+
+          <a
+            href="/admin/translators"
+            className="block transition hover:-translate-y-0.5"
+          >
+            <DashboardCard
+              title="Active Translators"
+              value={activeTranslatorsCount ?? 0}
+            />
+          </a>
+
         </div>
 
 
@@ -161,6 +218,21 @@ export default async function AdminDashboardPage() {
               client who contacted you directly.
             </p>
           </a>
+
+          <a
+            href="/admin/translators"
+            className="rounded-2xl border border-[#dce6df] bg-white p-7 shadow-sm transition hover:border-[#9db9a8]"
+          >
+            <div className="text-xl font-bold">
+              Translators
+            </div>
+
+            <p className="mt-3 text-[#607067]">
+              Manage translator profiles, language pairs,
+              signatures and portal access.
+            </p>
+          </a>
+
         </div>
       </div>
     </main>

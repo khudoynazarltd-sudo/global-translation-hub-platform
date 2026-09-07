@@ -1,4 +1,4 @@
-
+﻿
 import StatusControls from "../StatusControls";
 import { notFound } from "next/navigation";
 import { requireAdmin } from "@/lib/auth/require-admin";
@@ -7,6 +7,7 @@ import FinalFileUpload from "@/app/admin/orders/FinalFileUpload";
 import ClientAccessLink from "@/app/admin/orders/ClientAccessLink";
 import CertificateDetails from "@/app/admin/orders/CertificateDetails";
 import CertificateActions from "@/app/admin/orders/CertificateActions";
+import TranslatorAssignment from "@/app/admin/orders/TranslatorAssignment";
 
 export const dynamic = "force-dynamic";
 
@@ -36,6 +37,7 @@ export default async function AdminOrderDetailsPage({
       created_at,
       payment_id,
       enquiry_id,
+      assigned_translator_id,
       enquiries (
         id,
         full_name,
@@ -94,14 +96,14 @@ export default async function AdminOrderDetailsPage({
       `)
       .eq("enquiry_id", order.enquiry_id)
       .neq("status", "final_translation");
-  
+
   if (sourceDocumentsError) {
     console.error(
       "Unable to load source documents:",
       sourceDocumentsError
     );
   }
-  
+
   const { data: finalDocuments, error: finalDocumentsError } =
     await supabaseAdmin
       .from("documents")
@@ -116,7 +118,7 @@ export default async function AdminOrderDetailsPage({
       `)
       .eq("enquiry_id", order.enquiry_id)
       .eq("status", "final_translation");
-  
+
   if (finalDocumentsError) {
     console.error(
       "Unable to load final translation files:",
@@ -143,14 +145,47 @@ export default async function AdminOrderDetailsPage({
       .eq("order_id", order.id)
       .maybeSingle();
 
+
+  const {
+    data: translators,
+    error: translatorsError,
+  } = await supabaseAdmin
+    .from("translators")
+    .select(`
+      id,
+      display_name,
+      credentials,
+      membership_body,
+      membership_number
+    `)
+    .eq(
+      "active",
+      true
+    )
+    .order(
+      "display_name",
+      {
+        ascending: true,
+      }
+    );
+
+  if (translatorsError) {
+    console.error(
+      "Unable to load translators:",
+      translatorsError
+    );
+  }
+
+
   return (
     <main className="min-h-screen bg-[#f5f8f6] px-6 py-10 text-[#13201a]">
+
       <div className="mx-auto max-w-7xl">
         <a
           href="/admin/orders"
           className="text-sm font-semibold text-[#087f5b]"
         >
-          ← Orders
+          в†ђ Orders
         </a>
 
         <div className="mt-4 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
@@ -181,14 +216,14 @@ export default async function AdminOrderDetailsPage({
               <Info label="Telephone" value={enquiry?.telephone || "Not provided"} />
               <Info
                 label="Language Pair"
-                value={`${enquiry?.source_language ?? ""} → ${enquiry?.target_language ?? ""}`}
+                value={`${enquiry?.source_language ?? ""} в†’ ${enquiry?.target_language ?? ""}`}
               />
               <Info label="Document Type" value={enquiry?.document_type} />
               <Info label="Purpose" value={enquiry?.purpose} />
               <Info label="Turnaround" value={enquiry?.turnaround} />
               <Info
                 label="Amount"
-                value={`£${Number(payment?.amount ?? enquiry?.indicative_price ?? 0).toFixed(2)}`}
+                value={`ВЈ${Number(payment?.amount ?? enquiry?.indicative_price ?? 0).toFixed(2)}`}
               />
             </dl>
           </section>
@@ -236,7 +271,7 @@ export default async function AdminOrderDetailsPage({
                   </div>
 
                   <div className="mt-1 text-xs text-[#69766f]">
-                    {document.mime_type} ·{" "}
+                    {document.mime_type} В·{" "}
                     {(Number(document.file_size) / 1024 / 1024).toFixed(2)} MB
                   </div>
                 </div>
@@ -245,7 +280,7 @@ export default async function AdminOrderDetailsPage({
                   <span className="text-sm font-medium text-[#65736b]">
                     {readableStatus(document.status)}
                   </span>
-                
+
                   <a
                     href={`/api/admin/documents/${document.id}/view`}
                     target="_blank"
@@ -270,7 +305,7 @@ export default async function AdminOrderDetailsPage({
           <h2 className="text-xl font-bold">
             Final Translation Files
           </h2>
-        
+
           <div className="mt-5 space-y-3">
             {(finalDocuments ?? []).map((document) => (
               <div
@@ -281,13 +316,13 @@ export default async function AdminOrderDetailsPage({
                   <div className="font-semibold">
                     {document.original_filename}
                   </div>
-            
+
                   <div className="mt-1 text-xs text-[#69766f]">
-                    {document.mime_type} ·{" "}
+                    {document.mime_type} В·{" "}
                     {(Number(document.file_size) / 1024 / 1024).toFixed(2)} MB
                   </div>
                 </div>
-            
+
                 <a
                   href={`/api/admin/documents/${document.id}/view`}
                   target="_blank"
@@ -298,7 +333,7 @@ export default async function AdminOrderDetailsPage({
                 </a>
               </div>
             ))}
-        
+
             {(finalDocuments ?? []).length === 0 && (
               <div className="text-sm text-[#69766f]">
                 No final translation has been uploaded yet.
@@ -306,11 +341,20 @@ export default async function AdminOrderDetailsPage({
             )}
           </div>
         </section>
-        
+
         <section className="mt-6 rounded-2xl border border-[#dce6df] bg-white p-6 shadow-sm">
           <h2 className="text-xl font-bold">
             Status History
           </h2>
+          <TranslatorAssignment
+            orderId={order.id}
+            assignedTranslatorId={
+              order.assigned_translator_id
+            }
+            translators={
+              translators ?? []
+            }
+          />
           <StatusControls
             orderId={order.id}
             currentStatus={order.status}
@@ -324,7 +368,7 @@ export default async function AdminOrderDetailsPage({
               certificateStatus={certificate.status}
             />
           )}
-          
+
           {certificate?.status === "issued" &&
             certificate.bundle_storage_path && (
               <div className="mt-4">

@@ -1,18 +1,35 @@
 "use client";
 
-import { FormEvent, useState } from "react";
-import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
+import {
+  FormEvent,
+  useState,
+} from "react";
 
-export default function AdminLoginPage() {
-  const router = useRouter();
+import {
+  useRouter,
+} from "next/navigation";
 
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+import {
+  createClient,
+} from "@/lib/supabase/client";
 
-  const [loading, setLoading] = useState(false);
+
+export default function TranslatorLoginPage() {
+  const router =
+    useRouter();
+
+  const [email, setEmail] =
+    useState("");
+
+  const [password, setPassword] =
+    useState("");
+
+  const [loading, setLoading] =
+    useState(false);
+
   const [errorMessage, setErrorMessage] =
     useState("");
+
 
   async function handleSubmit(
     event: FormEvent<HTMLFormElement>
@@ -22,14 +39,22 @@ export default function AdminLoginPage() {
     setLoading(true);
     setErrorMessage("");
 
-    try {
-      const supabase = createClient();
+    const supabase =
+      createClient();
 
-      const { error } =
-        await supabase.auth.signInWithPassword({
-          email: email.trim(),
-          password,
-        });
+    try {
+      const {
+        data: signInData,
+        error,
+      } =
+        await supabase.auth
+          .signInWithPassword({
+            email:
+              email.trim(),
+
+            password,
+          });
+
 
       if (error) {
         setErrorMessage(
@@ -40,9 +65,18 @@ export default function AdminLoginPage() {
       }
 
 
-      const sessionResponse =
+      if (!signInData.user) {
+        setErrorMessage(
+          "Supabase login succeeded but no user was returned."
+        );
+
+        return;
+      }
+
+
+      const response =
         await fetch(
-          "/api/admin/session",
+          "/api/translator/session",
           {
             method: "GET",
             cache: "no-store",
@@ -50,58 +84,69 @@ export default function AdminLoginPage() {
         );
 
 
-      const sessionData =
-        await sessionResponse.json();
+      const data =
+        await response.json();
 
 
       if (
-        !sessionResponse.ok ||
-        !sessionData.ok
+        !response.ok ||
+        !data.ok
       ) {
+        await supabase.auth
+          .signOut();
+
         setErrorMessage(
-          sessionData.message ||
-            "Admin access could not be verified."
+          `Password accepted, but Translator Portal access was rejected (${response.status}).`
         );
 
         return;
       }
 
+      router.push(
+        "/translator"
+      );
 
-      router.push("/admin");
       router.refresh();
-    } catch (error) {
+
+    } catch {
       setErrorMessage(
-        error instanceof Error
-          ? error.message
-          : "Unable to sign in."
+        "The email address or password is incorrect, or translator access has not been authorised."
       );
     } finally {
       setLoading(false);
     }
   }
 
+
   return (
     <main className="min-h-screen bg-[#f3f7f4] px-6 py-20 text-[#13201a]">
+
       <div className="mx-auto max-w-md">
+
         <div className="mb-8 text-center">
+
           <div className="text-sm font-semibold uppercase tracking-[0.18em] text-[#087f5b]">
             GLOBAL TRANSLATION HUB
           </div>
 
           <h1 className="mt-3 text-3xl font-bold">
-            Administration
+            Translator Portal
           </h1>
 
           <p className="mt-3 text-sm text-[#647269]">
-            Authorised personnel only
+            Secure access for authorised translators
           </p>
+
         </div>
+
 
         <form
           onSubmit={handleSubmit}
           className="rounded-3xl border border-[#dce6df] bg-white p-8 shadow-sm"
         >
+
           <div>
+
             <label className="mb-2 block font-semibold">
               Email address
             </label>
@@ -112,13 +157,18 @@ export default function AdminLoginPage() {
               autoComplete="email"
               value={email}
               onChange={(event) =>
-                setEmail(event.target.value)
+                setEmail(
+                  event.target.value
+                )
               }
               className="w-full rounded-xl border border-[#d5e0d8] px-4 py-4 outline-none focus:border-[#087f5b]"
             />
+
           </div>
 
+
           <div className="mt-5">
+
             <label className="mb-2 block font-semibold">
               Password
             </label>
@@ -129,17 +179,22 @@ export default function AdminLoginPage() {
               autoComplete="current-password"
               value={password}
               onChange={(event) =>
-                setPassword(event.target.value)
+                setPassword(
+                  event.target.value
+                )
               }
               className="w-full rounded-xl border border-[#d5e0d8] px-4 py-4 outline-none focus:border-[#087f5b]"
             />
+
           </div>
+
 
           {errorMessage && (
             <div className="mt-5 rounded-xl bg-[#fff0ed] px-4 py-3 text-sm font-medium text-[#9a3f2f]">
               {errorMessage}
             </div>
           )}
+
 
           <button
             type="submit"
@@ -150,13 +205,29 @@ export default function AdminLoginPage() {
               ? "Signing in..."
               : "Sign in securely"}
           </button>
+
+
+          <div className="mt-5 text-center">
+
+            <a
+              href="/translator/forgot-password"
+              className="text-sm font-semibold text-[#087f5b]"
+            >
+              Forgot or set your password?
+            </a>
+
+          </div>
+
         </form>
+
 
         <p className="mt-6 text-center text-xs leading-5 text-[#6b776f]">
           Access is restricted to authorised GLOBAL
-          TRANSLATION HUB personnel.
+          TRANSLATION HUB translators.
         </p>
+
       </div>
+
     </main>
   );
 }
