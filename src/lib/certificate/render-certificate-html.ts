@@ -493,6 +493,18 @@ export function renderCertificateHtml(
   </style>
 </head>
 
+    <div
+      style="
+        position:absolute;
+        left:5mm;
+        bottom:3mm;
+        font-size:6px;
+        color:red;
+      "
+    >
+      HTML CERTIFICATE V2
+    </div>
+
 <body>
 
   <section class="certificate-page">

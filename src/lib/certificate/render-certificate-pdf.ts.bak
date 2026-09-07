@@ -1,0 +1,75 @@
+import chromium from "@sparticuz/chromium";
+import puppeteer from "puppeteer-core";
+
+
+export async function renderCertificatePdf(
+  html: string
+) {
+  let browser:
+    Awaited<
+      ReturnType<
+        typeof puppeteer.launch
+      >
+    > | null = null;
+
+  try {
+    browser =
+      await puppeteer.launch({
+        args:
+          chromium.args,
+
+        defaultViewport:
+          chromium.defaultViewport,
+
+        executablePath:
+          await chromium.executablePath(),
+
+        headless:
+          chromium.headless,
+      });
+
+
+    const page =
+      await browser.newPage();
+
+
+    await page.setContent(
+      html,
+      {
+        waitUntil:
+          "networkidle0",
+      }
+    );
+
+
+    await page.emulateMediaType(
+      "screen"
+    );
+
+
+    const pdf =
+      await page.pdf({
+        format: "A4",
+
+        printBackground: true,
+
+        preferCSSPageSize: true,
+
+        margin: {
+          top: "0mm",
+          right: "0mm",
+          bottom: "0mm",
+          left: "0mm",
+        },
+      });
+
+
+    return new Uint8Array(
+      pdf
+    );
+  } finally {
+    if (browser) {
+      await browser.close();
+    }
+  }
+}

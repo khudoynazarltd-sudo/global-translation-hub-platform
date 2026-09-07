@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
-import { drawCertificatePage } from "@/lib/pdf/draw-certificate-page";
+import { buildCertificateHtml } from "@/lib/certificate/build-certificate-html";
+
+import { renderCertificatePdf } from "@/lib/certificate/render-certificate-pdf";
 
 import {
   PDFDocument,
@@ -300,48 +302,53 @@ export async function POST(
       await outputDocument.embedPng(
         qrBytes
       );
-
+    
     /*
       PAGE 1
       Certificate of Translation Accuracy
+    
+      Generated from the same HTML template
+      used by the administrative preview.
     */
     
-    const page =
-      outputDocument.addPage([
-        A4_WIDTH,
-        A4_HEIGHT,
-      ]);
+    const certificateHtml =
+      await buildCertificateHtml({
+        certificate,
     
-    const certificateContactEmail =
-      process.env
-        .CERTIFICATE_CONTACT_EMAIL
-        ?.trim() ||
-      null;
+        order: {
+          order_reference:
+            order.order_reference,
+        },
+      });
     
-    drawCertificatePage({
-      page,
     
-      certificate,
+    const certificatePdfBytes =
+      await renderCertificatePdf(
+        certificateHtml
+      );
     
-      order: {
-        order_reference:
-          order.order_reference,
-      },
     
-      regularFont,
-      boldFont,
+    const certificatePdf =
+      await PDFDocument.load(
+        certificatePdfBytes
+      );
     
-      logo,
-      watermark,
-      ciol,
-      signature,
-      stamp,
-      qrImage,
     
-      contactEmail:
-        certificateContactEmail,
-    });
+    const certificatePages =
+      await outputDocument.copyPages(
+        certificatePdf,
+        certificatePdf.getPageIndices()
+      );
     
+    
+    for (
+      const certificatePage of
+      certificatePages
+    ) {
+      outputDocument.addPage(
+        certificatePage
+      );
+    }
 
 
     const finalPdfBytes =

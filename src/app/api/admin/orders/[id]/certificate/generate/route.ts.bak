@@ -546,9 +546,16 @@ export async function POST(
     const bundleBytes =
       await outputDocument.save();
 
+    const bundleVersion =
+      new Date()
+        .toISOString()
+        .replace(/[-:]/g, "")
+        .replace(/\.\d{3}Z$/, "")
+        .replace("T", "-");
+    
     const storagePath =
       `${order.order_reference}/` +
-      `${order.order_reference}-Certified-Translation.pdf`;
+      `${order.order_reference}-Certified-Translation-${bundleVersion}.pdf`;
 
     /*
       If an older bundle exists for this certificate,
@@ -567,7 +574,7 @@ export async function POST(
             contentType:
               "application/pdf",
 
-            upsert: true,
+            upsert: false,
           }
         );
 
