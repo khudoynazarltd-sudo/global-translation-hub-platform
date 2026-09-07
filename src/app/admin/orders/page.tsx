@@ -1,4 +1,4 @@
-﻿import { requireAdmin } from "@/lib/auth/require-admin";
+import { requireAdmin } from "@/lib/auth/require-admin";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
@@ -104,7 +104,7 @@ export default async function AdminOrdersPage({
               href="/admin"
               className="text-sm font-semibold text-[#087f5b]"
             >
-              в†ђ Dashboard
+              ← Dashboard
             </a>
 
             <h1 className="mt-3 text-4xl font-bold">
@@ -183,7 +183,7 @@ export default async function AdminOrdersPage({
                       </td>
 
                       <td className="px-5 py-4">
-                        {enquiry?.source_language} в†’{" "}
+                        {enquiry?.source_language} →{" "}
                         {enquiry?.target_language}
                       </td>
 
@@ -192,7 +192,7 @@ export default async function AdminOrdersPage({
                       </td>
 
                       <td className="px-5 py-4">
-                        ВЈ{Number(
+                        £{Number(
                           enquiry?.indicative_price ?? 0
                         ).toFixed(2)}
                       </td>
@@ -218,7 +218,7 @@ export default async function AdminOrdersPage({
                             ).toLocaleString(
                               "en-GB"
                             )
-                          : "вЂ”"}
+                          : "—"}
                       </td>
 
 

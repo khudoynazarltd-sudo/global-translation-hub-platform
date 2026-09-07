@@ -1,6 +1,10 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import {
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 
 type Step =
   | "upload"
@@ -60,6 +64,28 @@ type SubmissionResult = {
   message?: string;
 };
 
+type PricingOptions = {
+  languages: Array<{
+    code: string;
+    name: string;
+    sort_order: number;
+  }>;
+
+  services: Array<{
+    code: string;
+    name: string;
+    sort_order: number;
+  }>;
+};
+
+
+type QuotePreview = {
+  loading: boolean;
+  requiresManualReview: boolean;
+  amount: number | null;
+  currency: string;
+};
+
 function formatPrice(value: number) {
   return new Intl.NumberFormat("en-GB", {
     style: "currency",
@@ -90,9 +116,245 @@ export default function QuotePage() {
   const [submissionError, setSubmissionError] = useState("");
   const [result, setResult] = useState<SubmissionResult | null>(null);
 
+
+  const [
+    pricingOptions,
+    setPricingOptions,
+  ] =
+    useState<PricingOptions | null>(
+      null
+    );
+
+
+  const [
+    pricingOptionsError,
+    setPricingOptionsError,
+  ] =
+    useState("");
+
+
+  const [
+    quotePreview,
+    setQuotePreview,
+  ] =
+    useState<QuotePreview>({
+      loading: false,
+      requiresManualReview: false,
+      amount: null,
+      currency: "GBP",
+    });
+
+
   const sourceAndTargetAreSame =
     sourceLanguage !== "" &&
     sourceLanguage === targetLanguage;
+
+  useEffect(() => {
+    let active = true;
+
+
+    async function loadPricingOptions() {
+      try {
+        const response =
+          await fetch(
+            "/api/pricing/options",
+            {
+              method: "GET",
+              cache: "no-store",
+            }
+          );
+
+
+        const data =
+          await response.json();
+
+
+        if (
+          !response.ok ||
+          !data.ok
+        ) {
+          throw new Error(
+            data.message ||
+              "Unable to load quotation options."
+          );
+        }
+
+
+        if (!active) {
+          return;
+        }
+
+
+        setPricingOptions({
+          languages:
+            data.languages ??
+            [],
+
+          services:
+            data.services ??
+            [],
+        });
+
+        setPricingOptionsError("");
+
+      } catch (error) {
+        if (!active) {
+          return;
+        }
+
+
+        setPricingOptionsError(
+          error instanceof Error
+            ? error.message
+            : "Unable to load quotation options."
+        );
+      }
+    }
+
+
+    loadPricingOptions();
+
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (
+      !sourceLanguage ||
+      !targetLanguage ||
+      !documentType ||
+      !turnaround ||
+      sourceAndTargetAreSame
+    ) {
+      setQuotePreview({
+        loading: false,
+        requiresManualReview: false,
+        amount: null,
+        currency: "GBP",
+      });
+
+      return;
+    }
+
+
+    const controller =
+      new AbortController();
+
+
+    async function loadQuote() {
+      setQuotePreview(
+        (current) => ({
+          ...current,
+          loading: true,
+        })
+      );
+
+
+      try {
+        const response =
+          await fetch(
+            "/api/pricing/quote",
+            {
+              method: "POST",
+
+              headers: {
+                "Content-Type":
+                  "application/json",
+              },
+
+              body:
+                JSON.stringify({
+                  sourceLanguage,
+                  targetLanguage,
+                  documentType,
+                  turnaround,
+                }),
+
+              signal:
+                controller.signal,
+
+              cache:
+                "no-store",
+            }
+          );
+
+
+        const data =
+          await response.json();
+
+
+        if (
+          !response.ok ||
+          !data.ok
+        ) {
+          throw new Error(
+            data.message ||
+              "Unable to calculate quotation."
+          );
+        }
+
+
+        setQuotePreview({
+          loading: false,
+
+          requiresManualReview:
+            Boolean(
+              data.requiresManualReview
+            ),
+
+          amount:
+            data.amount != null
+              ? Number(
+                  data.amount
+                )
+              : null,
+
+          currency:
+            data.currency ||
+            "GBP",
+        });
+
+      } catch (error) {
+        if (
+          error instanceof DOMException &&
+          error.name ===
+            "AbortError"
+        ) {
+          return;
+        }
+
+
+        console.error(
+          "Quote preview failed:",
+          error
+        );
+
+
+        setQuotePreview({
+          loading: false,
+          requiresManualReview: false,
+          amount: null,
+          currency: "GBP",
+        });
+      }
+    }
+
+
+    loadQuote();
+
+
+    return () => {
+      controller.abort();
+    };
+  }, [
+    sourceLanguage,
+    targetLanguage,
+    documentType,
+    turnaround,
+    sourceAndTargetAreSame,
+  ]);
 
   const canSubmit = useMemo(() => {
     return (
@@ -150,13 +412,13 @@ export default function QuotePage() {
 
   async function submitEnquiry() {
     if (!canSubmit || !file) return;
-  
+
     setSubmitting(true);
     setSubmissionError("");
-  
+
     try {
       const formData = new FormData();
-  
+
       formData.append("file", file);
       formData.append("fullName", fullName.trim());
       formData.append("email", email.trim());
@@ -166,20 +428,20 @@ export default function QuotePage() {
       formData.append("documentType", documentType);
       formData.append("purpose", purpose);
       formData.append("turnaround", turnaround);
-  
+
       const response = await fetch("/api/enquiries", {
         method: "POST",
         body: formData,
       });
-  
+
       const data: SubmissionResult = await response.json();
-  
+
       if (!response.ok || !data.ok) {
         throw new Error(
           data.message || "Unable to submit your translation enquiry."
         );
       }
-  
+
       setResult(data);
       goTo("result");
     } catch (error) {
@@ -187,20 +449,20 @@ export default function QuotePage() {
         error instanceof Error
           ? error.message
           : "Unable to submit your translation enquiry.";
-  
+
       setSubmissionError(message);
     } finally {
       setSubmitting(false);
     }
   }
-  
+
   async function proceedToPayment() {
     if (!result?.enquiryId) return;
-  
+
     try {
       setSubmitting(true);
       setSubmissionError("");
-  
+
       const response = await fetch("/api/checkout", {
         method: "POST",
         headers: {
@@ -210,15 +472,15 @@ export default function QuotePage() {
           enquiryId: result.enquiryId,
         }),
       });
-  
+
       const data = await response.json();
-  
+
       if (!response.ok || !data.ok || !data.checkoutUrl) {
         throw new Error(
           data.message || "Unable to open secure payment."
         );
       }
-  
+
       window.location.href = data.checkoutUrl;
     } catch (error) {
       setSubmissionError(
@@ -230,9 +492,9 @@ export default function QuotePage() {
       setSubmitting(false);
     }
   }
-  
+
   return (
-  
+
     <main className="min-h-screen bg-[#f6f9f7] text-[#13201a]">
       <header className="border-b border-[#dfe8e2] bg-white">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-5">
@@ -355,9 +617,25 @@ export default function QuotePage() {
               </p>
 
               <div className="mt-6 grid gap-3 sm:grid-cols-2">
-                {languages.map((language) => (
+                {[
+                  ...(
+                    pricingOptions?.languages.map(
+                      (language) =>
+                        language.name
+                    ) ??
+                    languages.filter(
+                      (language) =>
+                        language !== "Other" &&
+                        language !== "Not sure"
+                    )
+                  ),
+
+                  "Other",
+                  "Not sure",
+                ].map((language) => (
                   <button
                     key={language}
+
                     onClick={() => setSourceLanguage(language)}
                     className={`rounded-xl border px-5 py-4 text-left font-medium ${
                       sourceLanguage === language
@@ -382,7 +660,13 @@ export default function QuotePage() {
                   }
                   className="w-full rounded-xl border border-[#d7e1da] bg-white px-4 py-4 outline-none focus:border-[#087f5b]"
                 >
-                  {targetLanguages.map((language) => (
+                  {(
+                    pricingOptions?.languages.map(
+                      (language) =>
+                        language.name
+                    ) ??
+                    targetLanguages
+                  ).map((language) => (
                     <option key={language}>{language}</option>
                   ))}
                 </select>
@@ -418,7 +702,13 @@ export default function QuotePage() {
               <h2 className="text-2xl font-bold">Document type</h2>
 
               <div className="mt-6 grid gap-3 sm:grid-cols-2">
-                {documentTypes.map((item) => (
+                {(
+                  pricingOptions?.services.map(
+                    (service) =>
+                      service.name
+                  ) ??
+                  documentTypes
+                ).map((item) => (
                   <button
                     key={item}
                     onClick={() => setDocumentType(item)}
@@ -495,7 +785,49 @@ export default function QuotePage() {
 
           {step === "turnaround" && (
             <>
-              <h2 className="text-2xl font-bold">Turnaround</h2>
+              <h2 className="text-2xl font-bold">
+                Turnaround
+              </h2>
+
+
+              <div className="mt-5 rounded-2xl border border-[#dce6df] bg-[#fafcfb] p-5">
+
+                <div className="text-sm text-[#65736b]">
+                  Current quotation
+                </div>
+
+
+                {quotePreview.loading ? (
+                  <div className="mt-2 font-semibold text-[#607067]">
+                    Calculating...
+                  </div>
+                ) : quotePreview.requiresManualReview ? (
+                  <div className="mt-2">
+
+                    <div className="text-xl font-bold text-[#8a6418]">
+                      Manual Review Required
+                    </div>
+
+                    <p className="mt-2 text-sm leading-6 text-[#69766f]">
+                      We will review the document and prepare
+                      a quotation before payment.
+                    </p>
+
+                  </div>
+                ) : quotePreview.amount != null ? (
+                  <div className="mt-2 text-3xl font-bold text-[#087f5b]">
+                    {formatPrice(
+                      quotePreview.amount
+                    )}
+                  </div>
+                ) : (
+                  <div className="mt-2 text-sm text-[#69766f]">
+                    Select the required turnaround option.
+                  </div>
+                )}
+
+              </div>
+
 
               <div className="mt-7 space-y-3">
                 {turnaroundOptions.map((option) => (
@@ -742,6 +1074,12 @@ export default function QuotePage() {
             </>
           )}
 
+          {pricingOptionsError && (
+            <div className="mb-6 rounded-xl bg-[#fff0ed] px-4 py-3 text-sm text-[#9a3f2f]">
+              {pricingOptionsError}
+            </div>
+          )}
+
           {step === "result" && result && (
             <>
               {result.requiresManualReview ? (
@@ -778,24 +1116,24 @@ export default function QuotePage() {
                     <div className="text-sm text-[#66736c]">
                       Indicative total
                     </div>
-                  
+
                     <div className="mt-1 text-4xl font-bold text-[#087f5b]">
                       {typeof result.amount === "number"
                         ? formatPrice(result.amount)
                         : "Manual review"}
                     </div>
-                  
+
                     <p className="mt-4 text-sm leading-6 text-[#66736c]">
                       Your document is stored temporarily while you decide whether to proceed.
                     </p>
                   </div>
-                  
+
                   {submissionError && (
                     <div className="mt-6 rounded-xl bg-[#fff0ed] px-5 py-4 text-sm font-medium text-[#9a3f2f]">
                       {submissionError}
                     </div>
                   )}
-                  
+
                   <button
                     onClick={proceedToPayment}
                     disabled={submitting || !result.enquiryId}
@@ -805,7 +1143,7 @@ export default function QuotePage() {
                       ? "Opening secure payment..."
                       : "Proceed to Secure Payment"}
                   </button>
-                    
+
 
                   <div className="mt-8 rounded-xl border border-[#cfe1d6] bg-[#f4faf6] p-5">
                     <strong>Next stage:</strong> we will connect secure
@@ -840,14 +1178,14 @@ export default function QuotePage() {
                 >
                   Edit Quote Details
                 </button>
-              
+
                 <button
                   onClick={restart}
                   className="rounded-lg border border-[#cbd7cf] px-6 py-3 font-semibold"
                 >
                   Start New Enquiry
                 </button>
-              
+
                 <a
                   href="/"
                   className="rounded-lg bg-[#087f5b] px-6 py-3 font-semibold text-white"

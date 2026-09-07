@@ -1,4 +1,4 @@
-﻿
+
 import StatusControls from "../StatusControls";
 import { notFound } from "next/navigation";
 import { requireAdmin } from "@/lib/auth/require-admin";
@@ -185,7 +185,7 @@ export default async function AdminOrderDetailsPage({
           href="/admin/orders"
           className="text-sm font-semibold text-[#087f5b]"
         >
-          в†ђ Orders
+          ← Orders
         </a>
 
         <div className="mt-4 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
@@ -216,14 +216,14 @@ export default async function AdminOrderDetailsPage({
               <Info label="Telephone" value={enquiry?.telephone || "Not provided"} />
               <Info
                 label="Language Pair"
-                value={`${enquiry?.source_language ?? ""} в†’ ${enquiry?.target_language ?? ""}`}
+                value={`${enquiry?.source_language ?? ""} → ${enquiry?.target_language ?? ""}`}
               />
               <Info label="Document Type" value={enquiry?.document_type} />
               <Info label="Purpose" value={enquiry?.purpose} />
               <Info label="Turnaround" value={enquiry?.turnaround} />
               <Info
                 label="Amount"
-                value={`ВЈ${Number(payment?.amount ?? enquiry?.indicative_price ?? 0).toFixed(2)}`}
+                value={`£${Number(payment?.amount ?? enquiry?.indicative_price ?? 0).toFixed(2)}`}
               />
             </dl>
           </section>
@@ -271,7 +271,7 @@ export default async function AdminOrderDetailsPage({
                   </div>
 
                   <div className="mt-1 text-xs text-[#69766f]">
-                    {document.mime_type} В·{" "}
+                    {document.mime_type} ·{" "}
                     {(Number(document.file_size) / 1024 / 1024).toFixed(2)} MB
                   </div>
                 </div>
@@ -318,7 +318,7 @@ export default async function AdminOrderDetailsPage({
                   </div>
 
                   <div className="mt-1 text-xs text-[#69766f]">
-                    {document.mime_type} В·{" "}
+                    {document.mime_type} ·{" "}
                     {(Number(document.file_size) / 1024 / 1024).toFixed(2)} MB
                   </div>
                 </div>

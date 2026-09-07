@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { randomUUID } from "crypto";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import {
-  calculateQuote,
   DOCUMENT_TYPES,
   PURPOSES,
   SOURCE_LANGUAGES,
@@ -10,6 +9,9 @@ import {
   TURNAROUNDS,
 } from "@/lib/pricing";
 
+import {
+  calculateServerQuote,
+} from "@/lib/pricing/server";
 export const runtime = "nodejs";
 
 const ALLOWED_TYPES = new Set([
@@ -143,12 +145,13 @@ export async function POST(request: Request) {
       );
     }
 
-    const quote = calculateQuote({
-      sourceLanguage,
-      targetLanguage,
-      documentType,
-      turnaround,
-    });
+const quote =
+  await calculateServerQuote({
+    sourceLanguage,
+    targetLanguage,
+    documentType,
+    turnaround,
+  });
 
     const expiresAt = new Date(
       Date.now() +

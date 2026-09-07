@@ -1,4 +1,4 @@
-﻿import { requireAdmin } from "@/lib/auth/require-admin";
+import { requireAdmin } from "@/lib/auth/require-admin";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
@@ -233,7 +233,23 @@ export default async function AdminDashboardPage() {
             </p>
           </a>
 
+
+          <a
+            href="/admin/pricing"
+            className="rounded-2xl border border-[#dce6df] bg-white p-7 shadow-sm transition hover:border-[#9db9a8]"
+          >
+            <div className="text-xl font-bold">
+              Pricing
+            </div>
+
+            <p className="mt-3 text-[#607067]">
+              Manage services, languages, prices and
+              turnaround multipliers.
+            </p>
+          </a>
+
         </div>
+
       </div>
     </main>
   );
