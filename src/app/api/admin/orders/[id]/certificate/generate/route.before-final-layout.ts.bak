@@ -1,9 +1,8 @@
 import { NextResponse } from "next/server";
-import { drawCertificatePage } from "@/lib/pdf/draw-certificate-page";
-
 import {
   PDFDocument,
   StandardFonts,
+  rgb,
 } from "pdf-lib";
 
 import fs from "fs/promises";
@@ -18,7 +17,59 @@ export const runtime = "nodejs";
 const A4_WIDTH = 595.28;
 const A4_HEIGHT = 841.89;
 
+function formatDate(value: string | null) {
+  if (!value) {
+    return "Not specified";
+  }
 
+  return new Date(
+    `${value}T00:00:00`
+  ).toLocaleDateString("en-GB", {
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+  });
+}
+
+function wrapText(
+  text: string,
+  font: any,
+  fontSize: number,
+  maxWidth: number
+) {
+  const words = text.split(/\s+/);
+  const lines: string[] = [];
+
+  let currentLine = "";
+
+  for (const word of words) {
+    const testLine = currentLine
+      ? `${currentLine} ${word}`
+      : word;
+
+    const width =
+      font.widthOfTextAtSize(
+        testLine,
+        fontSize
+      );
+
+    if (
+      width > maxWidth &&
+      currentLine
+    ) {
+      lines.push(currentLine);
+      currentLine = word;
+    } else {
+      currentLine = testLine;
+    }
+  }
+
+  if (currentLine) {
+    lines.push(currentLine);
+  }
+
+  return lines;
+}
 
 async function loadBrandingFile(
   filename: string
@@ -305,44 +356,737 @@ export async function POST(
       PAGE 1
       Certificate of Translation Accuracy
     */
-    
+
     const page =
       outputDocument.addPage([
         A4_WIDTH,
         A4_HEIGHT,
       ]);
+
+    const watermarkScale =
+      Math.min(
+        470 / watermark.width,
+        470 / watermark.height
+      );
+
+    page.drawImage(watermark, {
+      x:
+        (A4_WIDTH -
+          watermark.width *
+            watermarkScale) /
+        2,
+
+      y: 180,
+
+      width:
+        watermark.width *
+        watermarkScale,
+
+      height:
+        watermark.height *
+        watermarkScale,
+
+      opacity: 0.07,
+    });
+
+    const logoScale =
+      Math.min(
+        145 / logo.width,
+        105 / logo.height
+      );
+
+    page.drawImage(logo, {
+      x: 35,
+      y: 720,
+
+      width:
+        logo.width * logoScale,
+
+      height:
+        logo.height * logoScale,
+    });
+
+    const ciolScale =
+      Math.min(
+        115 / ciol.width,
+        105 / ciol.height
+      );
+
+    page.drawImage(ciol, {
+      x:
+        A4_WIDTH -
+        ciol.width * ciolScale -
+        35,
+
+      y: 720,
+
+      width:
+        ciol.width * ciolScale,
+
+      height:
+        ciol.height * ciolScale,
+    });
+
+    page.drawText(
+      "KHUDOYNAZAR LTD",
+      {
+        x: 224,
+        y: 790,
+        size: 11,
+        font: boldFont,
+      }
+    );
+
+    page.drawText(
+      "trading as",
+      {
+        x: 263,
+        y: 775,
+        size: 8,
+        font: regularFont,
+      }
+    );
+
+    page.drawText(
+      "GLOBAL TRANSLATION HUB",
+      {
+        x: 216,
+        y: 758,
+        size: 10,
+        font: boldFont,
+      }
+    );
+
+    page.drawText(
+      "6 Lyndewode Road, Cambridge, CB1 2HL",
+      {
+        x: 203,
+        y: 739,
+        size: 7.5,
+        font: regularFont,
+      }
+    );
+
+    page.drawText(
+      "United Kingdom",
+      {
+        x: 263,
+        y: 727,
+        size: 7.5,
+        font: regularFont,
+      }
+    );
+
+
+    page.drawLine({
+      start: {
+        x: 42,
+        y: 705,
+      },
+
+      end: {
+        x: A4_WIDTH - 42,
+        y: 705,
+      },
+
+      thickness: 0.8,
+
+      color: rgb(
+        0.13,
+        0.2,
+        0.16
+      ),
+    });
+
+    page.drawText(
+      "CERTIFICATE OF TRANSLATION ACCURACY",
+      {
+        x: 92,
+        y: 665,
+        size: 18,
+        font: boldFont,
+
+        color: rgb(
+          0.03,
+          0.5,
+          0.35
+        ),
+      }
+    );
+
+    const infoRows: Array<
+      [string, string]
+    > = [
+      [
+        "Certificate Reference",
+        certificate.certificate_reference,
+      ],
+
+      [
+        "Order Reference",
+        order.order_reference,
+      ],
+
+      [
+        "Client Name",
+        certificate.client_name ??
+          "Not specified",
+      ],
+
+      [
+        "Document Title",
+        certificate.document_title ??
+          "Not specified",
+      ],
+
+      [
+        "Source Language",
+        certificate.source_language,
+      ],
+
+      [
+        "Target Language",
+        certificate.target_language,
+      ],
+
+      [
+        "Number of Pages",
+        String(
+          certificate.number_of_pages ??
+            1
+        ),
+      ],
+
+      [
+        "Date Assigned",
+        formatDate(
+          certificate.date_assigned
+        ),
+      ],
+
+      [
+        "Date Returned",
+        formatDate(
+          certificate.date_returned
+        ),
+      ],
+
+      [
+        "Certification Date",
+        formatDate(
+          certificate.certification_date
+        ),
+      ],
+    ];
+
+    let infoY = 625;
+
+    for (
+      let index = 0;
+      index < infoRows.length;
+      index++
+    ) {
+      const [label, value] =
+        infoRows[index];
+
+      const column =
+        index % 2;
+
+      const row =
+        Math.floor(index / 2);
+
+      const x =
+        column === 0
+          ? 48
+          : 315;
+
+      const y =
+        infoY -
+        row * 37;
+
+      page.drawText(label, {
+        x,
+        y,
+        size: 7.5,
+        font: regularFont,
+
+        color: rgb(
+          0.38,
+          0.44,
+          0.4
+        ),
+      });
+
+      page.drawText(value, {
+        x,
+        y: y - 13,
+        size: 9.5,
+        font: boldFont,
+      });
+    }
+
+    let y = 425;
+
+    page.drawText(
+      "CERTIFICATION STATEMENT",
+      {
+        x: 48,
+        y,
+        size: 11,
+        font: boldFont,
+      }
+    );
+
+    y -= 22;
+
+    const statementLines =
+      wrapText(
+        certificate.certification_statement ??
+          "",
+        regularFont,
+        9.5,
+        495
+      );
+
+    for (
+      const line of statementLines
+    ) {
+      page.drawText(line, {
+        x: 48,
+        y,
+        size: 9.5,
+        font: regularFont,
+      });
+
+      y -= 14;
+    }
+
+    y -= 16;
+
+    page.drawText(
+      "SOURCE DOCUMENT DISCLAIMER",
+      {
+        x: 48,
+        y,
+        size: 10,
+        font: boldFont,
+      }
+    );
+
+    y -= 20;
+
+    const disclaimer =
+      "This certification relates solely to the accuracy of the translation. " +
+      "GLOBAL TRANSLATION HUB / KHUDOYNAZAR LTD does not certify, authenticate " +
+      "or verify the authenticity, validity, provenance or legal effect of the " +
+      "source document supplied by the client.";
+
+    const disclaimerLines =
+      wrapText(
+        disclaimer,
+        regularFont,
+        8.5,
+        495
+      );
+
+    for (
+      const line of disclaimerLines
+    ) {
+      page.drawText(line, {
+        x: 48,
+        y,
+        size: 8.5,
+        font: regularFont,
+
+        color: rgb(
+          0.18,
+          0.24,
+          0.2
+        ),
+      });
+
+      y -= 12;
+    }
+
+    y -= 20;
+
+/*
+  TRANSLATOR AND COMPANY DETAILS
+*/
+
+const lowerSectionY = 245;
+
+page.drawText(
+  "Translator",
+  {
+    x: 48,
+    y: lowerSectionY,
+    size: 7.5,
+    font: regularFont,
+
+    color: rgb(
+      0.38,
+      0.44,
+      0.4
+    ),
+  }
+);
+
+page.drawText(
+  "Dr Zulfiyor Bakhtiyorov ACIL",
+  {
+    x: 48,
+    y: lowerSectionY - 16,
+    size: 10,
+    font: boldFont,
+  }
+);
+
+page.drawText(
+  "Associate Member of the Chartered Institute of Linguists",
+  {
+    x: 48,
+    y: lowerSectionY - 32,
+    size: 8,
+    font: regularFont,
+  }
+);
+
+page.drawText(
+  "CIOL Membership No. 95203",
+  {
+    x: 48,
+    y: lowerSectionY - 45,
+    size: 8,
+    font: regularFont,
+  }
+);
+
+
+/*
+  COMPANY DETAILS
+*/
+
+page.drawText(
+  "For and on behalf of",
+  {
+    x: 330,
+    y: lowerSectionY,
+    size: 7.5,
+    font: regularFont,
+
+    color: rgb(
+      0.38,
+      0.44,
+      0.4
+    ),
+  }
+);
+
+page.drawText(
+  "GLOBAL TRANSLATION HUB",
+  {
+    x: 330,
+    y: lowerSectionY - 16,
+    size: 10,
+    font: boldFont,
+  }
+);
+
+page.drawText(
+  "KHUDOYNAZAR LTD",
+  {
+    x: 330,
+    y: lowerSectionY - 32,
+    size: 8,
+    font: regularFont,
+  }
+);
+
+page.drawText(
+  "Company No. 16122617",
+  {
+    x: 330,
+    y: lowerSectionY - 45,
+    size: 8,
+    font: regularFont,
+  }
+);
+
+page.drawText(
+  "globaltranslationhub.co.uk",
+  {
+    x: 330,
+    y: lowerSectionY - 59,
+    size: 8,
+    font: regularFont,
+
+    color: rgb(
+      0.03,
+      0.5,
+      0.35
+    ),
+  }
+);
+
+/*
+  Corporate email will appear automatically
+  once CERTIFICATE_CONTACT_EMAIL is configured.
+*/
+
+const certificateContactEmail =
+  process.env.CERTIFICATE_CONTACT_EMAIL?.trim();
+
+if (certificateContactEmail) {
+  page.drawText(
+    certificateContactEmail,
+    {
+      x: 330,
+      y: lowerSectionY - 72,
+      size: 8,
+      font: regularFont,
+    }
+  );
+}
+
+
+/*
+  SIGNATURE
+*/
+
+page.drawText(
+  "Signature",
+  {
+    x: 48,
+    y: 164,
+    size: 8,
+    font: regularFont,
+
+    color: rgb(
+      0.38,
+      0.44,
+      0.4
+    ),
+  }
+);
+
+const signatureScale =
+  Math.min(
+    145 / signature.width,
+    52 / signature.height
+  );
+
+page.drawImage(
+  signature,
+  {
+    x: 58,
+    y: 111,
+
+    width:
+      signature.width *
+      signatureScale,
+
+    height:
+      signature.height *
+      signatureScale,
+  }
+);
+
+page.drawLine({
+  start: {
+    x: 48,
+    y: 106,
+  },
+
+  end: {
+    x: 240,
+    y: 106,
+  },
+
+  thickness: 0.8,
+
+  color: rgb(
+    0.1,
+    0.1,
+    0.1
+  ),
+});
+
+
+/*
+  COMPANY STAMP
+
+  Positioned immediately to the right of
+  the signature area and below the company details.
+*/
+
+const stampScale =
+  Math.min(
+    100 / stamp.width,
+    100 / stamp.height
+  );
+
+page.drawImage(
+  stamp,
+  {
+    x: 345,
+    y: 100,
+
+    width:
+      stamp.width *
+      stampScale,
+
+    height:
+      stamp.height *
+      stampScale,
+
+    opacity: 0.92,
+  }
+);
+
+
+    /*
+      CERTIFICATION DATE
+    */
     
-    const certificateContactEmail =
-      process.env
-        .CERTIFICATE_CONTACT_EMAIL
-        ?.trim() ||
-      null;
+    page.drawText(
+      `Certification Date: ${formatDate(
+        certificate.certification_date
+      )}`,
+      {
+        x: 48,
+        y: 82,
+        size: 8,
+        font: regularFont,
+      }
+    );
     
-    drawCertificatePage({
-      page,
     
-      certificate,
+    /*
+      VERIFICATION FOOTER
+    */
     
-      order: {
-        order_reference:
-          order.order_reference,
+    page.drawLine({
+      start: {
+        x: 48,
+        y: 66,
       },
     
-      regularFont,
-      boldFont,
+      end: {
+        x: A4_WIDTH - 48,
+        y: 66,
+      },
     
-      logo,
-      watermark,
-      ciol,
-      signature,
-      stamp,
-      qrImage,
+      thickness: 0.5,
     
-      contactEmail:
-        certificateContactEmail,
+      color: rgb(
+        0.78,
+        0.84,
+        0.8
+      ),
     });
     
-
+    page.drawText(
+      "Certificate Verification Reference:",
+      {
+        x: 48,
+        y: 51,
+        size: 7,
+        font: regularFont,
+    
+        color: rgb(
+          0.38,
+          0.44,
+          0.4
+        ),
+      }
+    );
+    
+    page.drawText(
+      certificate.certificate_reference,
+      {
+        x: 48,
+        y: 39,
+        size: 8,
+        font: boldFont,
+      }
+    );
+    
+    page.drawText(
+      "Verify online:",
+      {
+        x: 205,
+        y: 51,
+        size: 7,
+        font: regularFont,
+    
+        color: rgb(
+          0.38,
+          0.44,
+          0.4
+        ),
+      }
+    );
+    
+    page.drawText(
+      "globaltranslationhub.co.uk/verify",
+      {
+        x: 205,
+        y: 39,
+        size: 7.5,
+        font: boldFont,
+    
+        color: rgb(
+          0.03,
+          0.5,
+          0.35
+        ),
+      }
+    );
+    
+    
+    /*
+      QR CODE
+      Bottom-right verification area.
+    */
+    
+    const qrSize = 54;
+    
+    page.drawImage(
+      qrImage,
+      {
+        x:
+          A4_WIDTH -
+          qrSize -
+          48,
+    
+        y: 10,
+    
+        width: qrSize,
+        height: qrSize,
+      }
+    );
+    
+    page.drawText(
+      "SCAN TO VERIFY",
+      {
+        x:
+          A4_WIDTH -
+          qrSize -
+          46,
+    
+        y: 3,
+    
+        size: 5.5,
+        font: boldFont,
+    
+        color: rgb(
+          0.03,
+          0.5,
+          0.35
+        ),
+      }
+    );
 
     const finalPdfBytes =
       new Uint8Array(
