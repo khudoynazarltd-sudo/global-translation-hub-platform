@@ -394,7 +394,7 @@ export function renderCertificateHtml(
       position: absolute;
 
       left: 108mm;
-      top: -3mm;
+      top: -6mm;
 
       width: 31mm;
       height: 31mm;
@@ -493,17 +493,6 @@ export function renderCertificateHtml(
   </style>
 </head>
 
-    <div
-      style="
-        position:absolute;
-        left:5mm;
-        bottom:3mm;
-        font-size:6px;
-        color:red;
-      "
-    >
-      HTML CERTIFICATE V2
-    </div>
 
 <body>
 
