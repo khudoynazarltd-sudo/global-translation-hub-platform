@@ -7,10 +7,6 @@ import {
 } from "react";
 
 import {
-  useSearchParams,
-} from "next/navigation";
-
-import {
   createClient,
 } from "@/lib/supabase/client";
 
@@ -103,9 +99,6 @@ function formatPrice(value: number) {
 }
 
 export default function QuotePage() {
-  const searchParams =
-    useSearchParams();
-
   const [step, setStep] =
     useState<Step>("upload");
 
@@ -182,10 +175,16 @@ export default function QuotePage() {
     });
 
   useEffect(() => {
+    const searchParams =
+      new URLSearchParams(
+        window.location.search
+      );
+
     const service =
       searchParams.get(
         "service"
       );
+
 
     if (
       service ===
@@ -220,9 +219,7 @@ export default function QuotePage() {
         "upload"
       );
     }
-  }, [
-    searchParams,
-  ]);
+  }, []);
 
   const sourceAndTargetAreSame =
     sourceLanguage !== "" &&
@@ -1581,18 +1578,22 @@ export default function QuotePage() {
               </h2>
 
               <p className="mt-3 leading-7 text-[#607067]">
-                Please check your information before submitting. Your
-                document will only be uploaded after you press Submit
-                Enquiry.
+                {isMediaService
+                  ? mediaFile
+                    ? "Please check your information before submitting. Your audio or video file will only be uploaded after you press Submit Enquiry."
+                    : "Please check your information before submitting your enquiry."
+                  : "Please check your information before submitting. Your document will only be uploaded after you press Submit Enquiry."}
               </p>
-
               <div className="mt-8 divide-y divide-[#e5ebe7] rounded-2xl border border-[#dce6df]">
                 <ReviewRow
-                  label="Document"
+                  label={
+                    isMediaService
+                      ? "Service"
+                      : "Document"
+                  }
                   value={documentType}
                   onEdit={() => goTo("document")}
                 />
-
                 <ReviewRow
                   label="Language"
                   value={`${sourceLanguage} → ${targetLanguage}`}

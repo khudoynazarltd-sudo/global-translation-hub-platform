@@ -1578,18 +1578,22 @@ export default function QuotePage() {
               </h2>
 
               <p className="mt-3 leading-7 text-[#607067]">
-                Please check your information before submitting. Your
-                document will only be uploaded after you press Submit
-                Enquiry.
+                {isMediaService
+                  ? mediaFile
+                    ? "Please check your information before submitting. Your audio or video file will only be uploaded after you press Submit Enquiry."
+                    : "Please check your information before submitting your enquiry."
+                  : "Please check your information before submitting. Your document will only be uploaded after you press Submit Enquiry."}
               </p>
-
               <div className="mt-8 divide-y divide-[#e5ebe7] rounded-2xl border border-[#dce6df]">
                 <ReviewRow
-                  label="Document"
+                  label={
+                    isMediaService
+                      ? "Service"
+                      : "Document"
+                  }
                   value={documentType}
                   onEdit={() => goTo("document")}
                 />
-
                 <ReviewRow
                   label="Language"
                   value={`${sourceLanguage} → ${targetLanguage}`}
@@ -1614,11 +1618,47 @@ export default function QuotePage() {
                   onEdit={() => goTo("contact")}
                 />
 
-                <ReviewRow
-                  label="File"
-                  value={file?.name ?? ""}
-                  onEdit={() => goTo("upload")}
-                />
+                {isMediaService ? (
+                  <>
+                    <ReviewRow
+                      label={
+                        mediaFile
+                          ? "Media File"
+                          : "External File Link"
+                      }
+                      value={
+                        mediaFile
+                          ? mediaFile.name
+                          : mediaExternalUrl
+                      }
+                      onEdit={() => goTo("document")}
+                    />
+
+                    <ReviewRow
+                      label="Requested Output"
+                      value={
+                        mediaOutputOptions.length > 0
+                          ? mediaOutputOptions.join(", ")
+                          : "Not selected"
+                      }
+                      onEdit={() => goTo("document")}
+                    />
+
+                    {mediaNotes.trim() !== "" && (
+                      <ReviewRow
+                        label="Additional Requirements"
+                        value={mediaNotes}
+                        onEdit={() => goTo("document")}
+                      />
+                    )}
+                  </>
+                ) : (
+                  <ReviewRow
+                    label="File"
+                    value={file?.name ?? ""}
+                    onEdit={() => goTo("upload")}
+                  />
+                )}
               </div>
 
               {submissionError && (
