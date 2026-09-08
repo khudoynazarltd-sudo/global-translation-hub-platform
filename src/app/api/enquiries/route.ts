@@ -52,33 +52,6 @@ export async function POST(request: Request) {
     const formData = await request.formData();
     const file = formData.get("file");
 
-    if (!(file instanceof File)) {
-      return NextResponse.json(
-        { ok: false, message: "A document file is required." },
-        { status: 400 }
-      );
-    }
-
-    if (!ALLOWED_TYPES.has(file.type)) {
-      return NextResponse.json(
-        { ok: false, message: "Only PDF, JPG and PNG files are accepted." },
-        { status: 400 }
-      );
-    }
-
-    if (file.size <= 0 || file.size > MAX_FILE_SIZE) {
-      return NextResponse.json(
-        {
-          ok: false,
-          message:
-            file.size <= 0
-              ? "The uploaded file is empty."
-              : "The maximum permitted file size is 15 MB.",
-        },
-        { status: 400 }
-      );
-    }
-
     const fullName = String(formData.get("fullName") ?? "").trim();
     const email = String(formData.get("email") ?? "").trim();
     const telephone = String(formData.get("telephone") ?? "").trim();
@@ -95,8 +68,148 @@ export async function POST(request: Request) {
       formData.get("documentType") ?? ""
     ).trim();
 
-    const purpose = String(formData.get("purpose") ?? "").trim();
-    const turnaround = String(formData.get("turnaround") ?? "").trim();
+    const purpose = String(
+      formData.get("purpose") ?? ""
+    ).trim();
+
+    const turnaround = String(
+      formData.get("turnaround") ?? ""
+    ).trim();
+
+    const mediaExternalUrl = String(
+      formData.get("mediaExternalUrl") ?? ""
+    ).trim();
+
+    if (
+      mediaExternalUrl &&
+      !/^https?:\/\//i.test(
+        mediaExternalUrl
+      )
+    ) {
+      return NextResponse.json(
+        {
+          ok: false,
+          message:
+            "Please provide a valid HTTP or HTTPS file-sharing link.",
+        },
+        {
+          status: 400,
+        }
+      );
+    }
+
+    const mediaStoragePath = String(
+      formData.get("mediaStoragePath") ?? ""
+    ).trim();
+
+    const mediaOriginalFilename = String(
+      formData.get("mediaOriginalFilename") ?? ""
+    ).trim();
+
+    const mediaMimeType = String(
+      formData.get("mediaMimeType") ?? ""
+    ).trim();
+
+    const mediaFileSize = Number(
+      formData.get("mediaFileSize") ?? 0
+    );
+
+    const mediaNotes = String(
+      formData.get("mediaNotes") ?? ""
+    ).trim();
+
+    let mediaOutputOptions: string[] = [];
+
+    try {
+      const parsed = JSON.parse(
+        String(formData.get("mediaOutputOptions") ?? "[]")
+      );
+
+      if (Array.isArray(parsed)) {
+        mediaOutputOptions = parsed
+          .map(String)
+          .map((item) => item.trim())
+          .filter(Boolean);
+      }
+    } catch {
+      mediaOutputOptions = [];
+    }
+
+    const isMediaService =
+      documentType === "Audio / Video Translation";
+
+    if (
+      !isMediaService &&
+      !(file instanceof File)
+    ) {
+      return NextResponse.json(
+        {
+          ok: false,
+          message: "A document file is required.",
+        },
+        { status: 400 }
+      );
+    }
+
+    if (
+      isMediaService &&
+      !mediaStoragePath &&
+      !mediaExternalUrl
+    ) {
+      return NextResponse.json(
+        {
+          ok: false,
+          message:
+            "Please upload an audio/video file or provide a secure file-sharing link.",
+        },
+        { status: 400 }
+      );
+    }
+
+    if (
+      isMediaService &&
+      mediaOutputOptions.length === 0
+    ) {
+      return NextResponse.json(
+        {
+          ok: false,
+          message:
+            "Please select at least one required audio/video output.",
+        },
+        { status: 400 }
+      );
+    }
+
+    if (
+      !isMediaService &&
+      file instanceof File &&
+      !ALLOWED_TYPES.has(file.type)
+    ) {
+      return NextResponse.json(
+        {
+          ok: false,
+          message: "Only PDF, JPG and PNG files are accepted.",
+        },
+        { status: 400 }
+      );
+    }
+
+    if (
+      !isMediaService &&
+      file instanceof File &&
+      (file.size <= 0 || file.size > MAX_FILE_SIZE)
+    ) {
+      return NextResponse.json(
+        {
+          ok: false,
+          message:
+            file.size <= 0
+              ? "The uploaded file is empty."
+              : "The maximum permitted file size is 15 MB.",
+        },
+        { status: 400 }
+      );
+    }
 
     if (!fullName || !email) {
       return NextResponse.json(
@@ -217,17 +330,21 @@ export async function POST(request: Request) {
       );
     }
 
-const quote =
-  await calculateServerQuote({
-    sourceLanguage,
-    targetLanguage,
-    documentType,
-    turnaround,
-  });
+    const quote = await calculateServerQuote({
+      sourceLanguage,
+      targetLanguage,
+      documentType,
+      turnaround,
+    });
+
+    const requiresManualReview =
+      isMediaService ||
+      serviceRecord.manual_review === true ||
+      quote.requiresManualReview;
 
     const expiresAt = new Date(
       Date.now() +
-        (quote.requiresManualReview
+        (requiresManualReview
           ? 72 * 60 * 60 * 1000
           : 60 * 60 * 1000)
     );
@@ -235,7 +352,7 @@ const quote =
     const { data: enquiry, error: enquiryError } = await supabaseAdmin
       .from("enquiries")
       .insert({
-        status: quote.requiresManualReview
+        status: requiresManualReview
           ? "manual_review"
           : "quotation_pending_payment",
         source: "website",
@@ -247,7 +364,26 @@ const quote =
         document_type: documentType,
         purpose,
         turnaround,
-        requires_manual_review: quote.requiresManualReview,
+
+        media_external_url:
+          isMediaService &&
+          mediaExternalUrl
+            ? mediaExternalUrl
+            : null,
+
+        media_output_options:
+          isMediaService
+            ? mediaOutputOptions
+            : null,
+
+        media_notes:
+          isMediaService &&
+          mediaNotes
+            ? mediaNotes
+            : null,
+
+        requires_manual_review:
+          requiresManualReview,
         indicative_price: quote.amount,
         expires_at: expiresAt.toISOString(),
       })
@@ -265,52 +401,95 @@ const quote =
 
     enquiryId = enquiry.id;
 
-    const extension = getExtension(file.type);
+    if (
+      !isMediaService &&
+      file instanceof File
+    ) {
+      const extension = getExtension(file.type);
 
-    if (!extension) {
-      throw new Error("Unable to determine file extension.");
+      if (!extension) {
+        throw new Error("Unable to determine file extension.");
+      }
+
+      storagePath = `${enquiryId}/${randomUUID()}.${extension}`;
+
+      const arrayBuffer = await file.arrayBuffer();
+
+      const { error: uploadError } = await supabaseAdmin.storage
+        .from("temporary-enquiries")
+        .upload(storagePath, arrayBuffer, {
+          contentType: file.type,
+          upsert: false,
+        });
+
+      if (uploadError) {
+        console.error("Storage upload failed:", uploadError);
+        throw new Error("Unable to store the temporary document.");
+      }
+
+      const { error: documentError } = await supabaseAdmin
+        .from("documents")
+        .insert({
+          enquiry_id: enquiryId,
+          storage_path: storagePath,
+          original_filename: file.name,
+          mime_type: file.type,
+          file_size: file.size,
+          status: "temporary",
+          expires_at: expiresAt.toISOString(),
+        });
+
+      if (documentError) {
+        console.error(
+          "Document metadata insert failed:",
+          documentError
+        );
+
+        throw new Error(
+          "Unable to save document metadata."
+        );
+      }
     }
 
-    storagePath = `${enquiryId}/${randomUUID()}.${extension}`;
+    if (
+      isMediaService &&
+      mediaStoragePath
+    ) {
+      if (
+        !mediaStoragePath.startsWith("pending-media/")
+      ) {
+        throw new Error("Invalid media storage path.");
+      }
 
-    const arrayBuffer = await file.arrayBuffer();
+      const { error: mediaDocumentError } = await supabaseAdmin
+        .from("documents")
+        .insert({
+          enquiry_id: enquiry.id,
+          storage_path: mediaStoragePath,
+          original_filename:
+            mediaOriginalFilename || "Audio / Video file",
+          mime_type:
+            mediaMimeType || "application/octet-stream",
+          file_size: Number.isFinite(mediaFileSize)
+            ? mediaFileSize
+            : null,
+          status: "temporary",
+          expires_at: expiresAt.toISOString(),
+        });
 
-    const { error: uploadError } = await supabaseAdmin.storage
-      .from("temporary-enquiries")
-      .upload(storagePath, arrayBuffer, {
-        contentType: file.type,
-        upsert: false,
-      });
+      if (mediaDocumentError) {
+        console.error(
+          "Media document metadata insert failed:",
+          mediaDocumentError
+        );
 
-    if (uploadError) {
-      console.error("Storage upload failed:", uploadError);
-      throw new Error("Unable to store the temporary document.");
+        throw new Error(
+          "Unable to save media file metadata."
+        );
+      }
     }
 
-    const { error: documentError } = await supabaseAdmin
-      .from("documents")
-      .insert({
-        enquiry_id: enquiryId,
-        storage_path: storagePath,
-        original_filename: file.name,
-        mime_type: file.type,
-        file_size: file.size,
-        status: "temporary",
-        expires_at: expiresAt.toISOString(),
-      });
-
-    if (documentError) {
-      console.error(
-        "Document metadata insert failed:",
-        documentError
-      );
-
-      throw new Error(
-        "Unable to save document metadata."
-      );
-    }
-
-    if (quote.requiresManualReview) {
+    if (requiresManualReview) {
       /*
         Client acknowledgement.
       */
@@ -377,7 +556,7 @@ const quote =
       {
         ok: true,
         enquiryId,
-        requiresManualReview: quote.requiresManualReview,
+        requiresManualReview,
         amount: quote.amount,
         currency: quote.currency,
         expiresAt: expiresAt.toISOString(),

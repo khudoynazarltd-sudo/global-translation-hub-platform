@@ -54,7 +54,10 @@ export default async function AdminEnquiryDetailsPage({
         indicative_price,
         requires_manual_review,
         admin_notes,
-        reviewed_at
+        reviewed_at,
+        media_external_url,
+        media_output_options,
+        media_notes
       `)
       .eq(
         "id",
@@ -224,6 +227,93 @@ export default async function AdminEnquiryDetailsPage({
 
         </section>
 
+        {enquiry.document_type ===
+          "Audio / Video Translation" && (
+          <section className="mt-6 rounded-2xl border border-[#b9d8c7] bg-[#f8fbf9] p-6 shadow-sm">
+
+            <div className="text-sm font-semibold uppercase tracking-[0.14em] text-[#087f5b]">
+              Audio / Video Translation
+            </div>
+
+            <h2 className="mt-2 text-xl font-bold">
+              Media Requirements
+            </h2>
+
+
+            <div className="mt-6 grid gap-6 sm:grid-cols-2">
+
+              <div>
+                <div className="text-sm font-semibold text-[#65736b]">
+                  Requested Output
+                </div>
+
+                {Array.isArray(
+                  enquiry.media_output_options
+                ) &&
+                enquiry.media_output_options.length >
+                  0 ? (
+                  <ul className="mt-3 space-y-2">
+                    {enquiry.media_output_options.map(
+                      (
+                        option:
+                          string
+                      ) => (
+                        <li
+                          key={option}
+                          className="rounded-lg border border-[#dce6df] bg-white px-4 py-3 text-sm"
+                        >
+                          {option}
+                        </li>
+                      )
+                    )}
+                  </ul>
+                ) : (
+                  <p className="mt-2 text-sm text-[#69766f]">
+                    No output option supplied.
+                  </p>
+                )}
+              </div>
+
+
+              <div>
+                <div className="text-sm font-semibold text-[#65736b]">
+                  External File Link
+                </div>
+
+                {enquiry.media_external_url ? (
+                  <a
+                    href={
+                      enquiry.media_external_url
+                    }
+                    target="_blank"
+                    rel="noreferrer"
+                    className="mt-3 inline-block break-all rounded-lg border border-[#087f5b] bg-white px-4 py-3 text-sm font-semibold text-[#087f5b] hover:bg-[#eef8f2]"
+                  >
+                    Open External File
+                  </a>
+                ) : (
+                  <p className="mt-2 text-sm text-[#69766f]">
+                    No external file link supplied.
+                  </p>
+                )}
+              </div>
+
+            </div>
+
+
+            <div className="mt-6">
+              <div className="text-sm font-semibold text-[#65736b]">
+                Additional Requirements
+              </div>
+
+              <div className="mt-3 rounded-xl border border-[#dce6df] bg-white p-4 text-sm leading-6 text-[#536259]">
+                {enquiry.media_notes ||
+                  "No additional requirements supplied."}
+              </div>
+            </div>
+
+          </section>
+        )}
 
         <section className="mt-6 rounded-2xl border border-[#dce6df] bg-white p-6 shadow-sm">
 

@@ -2,6 +2,10 @@ import type {
   Metadata,
 } from "next";
 
+import {
+  supabaseAdmin,
+} from "@/lib/supabase/admin";
+
 
 export const metadata: Metadata = {
   alternates: {
@@ -16,7 +20,66 @@ export const metadata: Metadata = {
 };
 
 
-export default function Home() {
+export default async function Home() {
+  const {
+    data: services,
+  } =
+    await supabaseAdmin
+      .from("service_types")
+      .select(`
+        id,
+        name,
+        base_price,
+        manual_review,
+        active
+      `)
+      .eq(
+        "active",
+        true
+      )
+      .order(
+        "name",
+        {
+          ascending: true,
+        }
+      );
+
+
+  const serviceMap =
+    new Map(
+      (services ?? []).map(
+        (service) => [
+          service.name,
+          service,
+        ]
+      )
+    );
+
+
+  function servicePrice(
+    serviceName: string
+  ) {
+    const service =
+      serviceMap.get(
+        serviceName
+      );
+
+
+    if (
+      !service ||
+      service.manual_review ||
+      service.base_price === null
+    ) {
+      return "Individual quotation";
+    }
+
+
+    return `from £${Number(
+      service.base_price
+    ).toFixed(0)}`;
+  }
+
+
   return (
     <main className="min-h-screen bg-[#f8faf8] text-[#13201a]">
       <header className="border-b border-[#dfe8e2] bg-white">
@@ -186,7 +249,7 @@ export default function Home() {
               <h3 className="text-xl font-bold">{service.title}</h3>
               <p className="mt-4 leading-7 text-[#607067]">{service.text}</p>
               <a
-                href="/quote"
+                href="/quote?service=document"
                 className="mt-7 inline-block font-semibold text-[#087f5b]"
               >
                 Request a quotation →
@@ -195,6 +258,90 @@ export default function Home() {
           ))}
         </div>
       </section>
+
+      <section className="border-y border-[#e2ebe5] bg-[#f4f9f6]">
+        <div className="mx-auto max-w-7xl px-6 py-20">
+
+          <div className="max-w-3xl">
+            <div className="text-sm font-semibold uppercase tracking-[0.18em] text-[#087f5b]">
+              Audio & Video Translation
+            </div>
+
+            <h2 className="mt-3 text-4xl font-bold tracking-tight">
+              Professional translation of audio and video content
+            </h2>
+
+            <p className="mt-5 text-lg leading-8 text-[#5e6c64]">
+              GLOBAL TRANSLATION HUB also provides professional translation
+              services for audio and video materials. Each assignment is reviewed
+              individually according to the language pair, recording quality,
+              duration, subject matter and required final format.
+            </p>
+          </div>
+
+
+          <div className="mt-12 grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+
+            <article className="rounded-2xl border border-[#dce8e0] bg-white p-7 shadow-sm">
+              <h3 className="text-xl font-bold">
+                Written Transcript & Certified Translation
+              </h3>
+
+              <p className="mt-4 leading-7 text-[#607067]">
+                We can prepare a complete written transcript of the spoken content
+                and provide the translated text as a professionally formatted
+                document. Where appropriate, certification can also be provided for
+                the completed written translation.
+              </p>
+            </article>
+
+
+            <article className="rounded-2xl border border-[#dce8e0] bg-white p-7 shadow-sm">
+              <h3 className="text-xl font-bold">
+                Translation Overlay / Voiceover
+              </h3>
+
+              <p className="mt-4 leading-7 text-[#607067]">
+                Where required, translated audio may be prepared for overlay or
+                voiceover use. The scope, timing and technical format are agreed
+                individually before work begins.
+              </p>
+            </article>
+
+
+            <article className="rounded-2xl border border-[#dce8e0] bg-white p-7 shadow-sm">
+              <h3 className="text-xl font-bold">
+                Subtitles
+              </h3>
+
+              <p className="mt-4 leading-7 text-[#607067]">
+                We can provide translated subtitles for video content, including
+                subtitle text prepared for use with common subtitle formats where
+                required.
+              </p>
+            </article>
+
+          </div>
+
+
+          <div className="mt-8 rounded-2xl border border-[#cfe4d8] bg-white p-6">
+            <p className="leading-7 text-[#536259]">
+              Audio and video translation is quoted individually. Please provide
+              details of the file duration, language pair, content type and the
+              required output format when requesting a quotation.
+            </p>
+
+            <a
+              href="/quote?service=audio-video"
+              className="mt-5 inline-block rounded-lg bg-[#087f5b] px-6 py-3 font-semibold text-white transition hover:bg-[#066a4c]"
+            >
+              Request an Audio / Video Quote
+            </a>
+          </div>
+
+        </div>
+      </section>
+
 
       <section
         id="languages"
@@ -243,21 +390,104 @@ export default function Home() {
               medical, court and complex documents are reviewed individually
               before a final quotation is confirmed.
             </p>
+
+        <div className="mt-8 grid gap-4 sm:grid-cols-3">
+
+          <div className="rounded-xl border border-[#dfe8e2] bg-white p-5 shadow-sm">
+            <div className="text-sm font-semibold uppercase tracking-[0.14em] text-[#087f5b]">
+              Standard
+            </div>
+
+            <div className="mt-2 text-lg font-bold text-[#17251e]">
+              Up to 3 working days
+            </div>
+          </div>
+
+
+          <div className="rounded-xl border border-[#dfe8e2] bg-white p-5 shadow-sm">
+            <div className="text-sm font-semibold uppercase tracking-[0.14em] text-[#087f5b]">
+              Priority
+            </div>
+
+            <div className="mt-2 text-lg font-bold text-[#17251e]">
+              Approximately 1.5–2 working days
+            </div>
+          </div>
+
+
+          <div className="rounded-xl border border-[#dfe8e2] bg-white p-5 shadow-sm">
+            <div className="text-sm font-semibold uppercase tracking-[0.14em] text-[#087f5b]">
+              Urgent
+            </div>
+
+            <div className="mt-2 text-lg font-bold text-[#17251e]">
+              Within 1 working day
+            </div>
+          </div>
+
+        </div>
+
+          <p className="mt-4 text-sm leading-6 text-[#6b776f]">
+            Turnaround times are subject to document complexity, language pair and availability.
+          </p>
+
           </div>
 
           <div className="overflow-hidden rounded-2xl border border-[#dfe8e2] bg-white">
             {[
-              ["Standard one-page certificate", "from £35"],
-              ["Birth Certificate", "from £35"],
-              ["Marriage Certificate", "from £35"],
-              ["Police Certificate", "from £35"],
-              ["Passport / ID document", "from £30"],
-              ["Legal / complex document", "Individual quotation"],
+              [
+                "Birth Certificate",
+                servicePrice(
+                  "Birth Certificate"
+                ),
+              ],
+
+              [
+                "Marriage Certificate",
+                servicePrice(
+                  "Marriage Certificate"
+                ),
+              ],
+
+              [
+                "Police Certificate",
+                servicePrice(
+                  "Police Certificate"
+                ),
+              ],
+
+              [
+                "Passport",
+                servicePrice(
+                  "Passport"
+                ),
+              ],
+
+              [
+                "Diploma",
+                servicePrice(
+                  "Diploma"
+                ),
+              ],
+
+              [
+                "Summons",
+                servicePrice(
+                  "Summons"
+                ),
+              ],
+
+              [
+                "Legal / complex document",
+                "Individual quotation",
+              ],
             ].map(([service, price], index) => (
               <div
                 key={service}
                 className={`flex items-center justify-between gap-5 px-6 py-5 ${
-                  index !== 5 ? "border-b border-[#edf1ee]" : ""
+                  index !== 6
+                    ? "border-b border-[#edf1ee]"
+                    : ""
                 }`}
               >
                 <span>{service}</span>
