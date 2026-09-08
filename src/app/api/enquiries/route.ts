@@ -34,6 +34,12 @@ type MediaUploadItem = {
   fileSize: number;
 };
 
+type DocumentUploadMetadata = {
+  documentType: string;
+  label: string;
+  pageCount: number | null;
+};
+
 function getExtension(
   mimeType: string
 ) {
@@ -54,6 +60,80 @@ function allowed(
   values: readonly string[]
 ) {
   return values.includes(value);
+}
+
+function parseDocumentItems(
+  raw: FormDataEntryValue | null
+): DocumentUploadMetadata[] {
+  if (raw == null) {
+    return [];
+  }
+
+  try {
+    const parsed = JSON.parse(
+      String(raw)
+    );
+
+    if (!Array.isArray(parsed)) {
+      return [];
+    }
+
+    return parsed.map((item) => {
+      if (
+        !item ||
+        typeof item !== "object"
+      ) {
+        return {
+          documentType: "",
+          label: "",
+          pageCount: null,
+        };
+      }
+
+      const record = item as Record<
+        string,
+        unknown
+      >;
+
+      const documentType = String(
+        record.documentType ?? ""
+      )
+        .trim()
+        .slice(0, 200);
+
+      const label = String(
+        record.label ?? ""
+      )
+        .trim()
+        .slice(0, 1000);
+
+      const rawPageCount = String(
+        record.pageCount ?? ""
+      ).trim();
+
+      const parsedPageCount =
+        rawPageCount === ""
+          ? null
+          : Number(rawPageCount);
+
+      const pageCount =
+        parsedPageCount != null &&
+        Number.isInteger(
+          parsedPageCount
+        ) &&
+        parsedPageCount > 0
+          ? parsedPageCount
+          : null;
+
+      return {
+        documentType,
+        label,
+        pageCount,
+      };
+    });
+  } catch {
+    return [];
+  }
 }
 
 function parseMediaItems(
@@ -155,6 +235,13 @@ export async function POST(
         );
       }
     }
+
+    const documentItems =
+      parseDocumentItems(
+        formData.get(
+          "documentItems"
+        )
+      );
 
     const fullName = String(
       formData.get("fullName") ?? ""
@@ -531,6 +618,7 @@ export async function POST(
 
     const requiresManualReview =
       isMediaService ||
+      documentFiles.length > 1 ||
       serviceRecord.manual_review ===
         true ||
       quote.requiresManualReview;
@@ -585,7 +673,9 @@ export async function POST(
         requires_manual_review:
           requiresManualReview,
         indicative_price:
-          quote.amount,
+          requiresManualReview
+            ? null
+            : quote.amount,
         expires_at:
           expiresAt.toISOString(),
       })
@@ -609,7 +699,16 @@ export async function POST(
     enquiryId = enquiry.id;
 
     if (!isMediaService) {
-      for (const file of documentFiles) {
+      for (
+        const [
+          index,
+          file,
+        ] of documentFiles.entries()
+      ) {
+        const metadata =
+          documentItems[index] ??
+          null;
+
         const extension =
           getExtension(file.type);
 
@@ -671,6 +770,15 @@ export async function POST(
               file.type,
             file_size:
               file.size,
+            document_type:
+              metadata?.documentType ||
+              null,
+            label:
+              metadata?.label ||
+              null,
+            page_count:
+              metadata?.pageCount ??
+              null,
             status:
               "temporary",
             expires_at:
@@ -778,7 +886,9 @@ export async function POST(
         enquiryId,
         requiresManualReview,
         amount:
-          quote.amount,
+          requiresManualReview
+            ? null
+            : quote.amount,
         currency:
           quote.currency,
         expiresAt:
