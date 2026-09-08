@@ -79,6 +79,22 @@ export const metadata: Metadata = {
 
     description:
       "Professional certified translation services for official, legal, immigration and academic documents in the UK.",
+
+    images: [
+      {
+        url:
+          "/branding/gth-logo.png",
+
+        width:
+          1200,
+
+        height:
+          630,
+
+        alt:
+          "GLOBAL TRANSLATION HUB",
+      },
+    ],
   },
 
   twitter: {
@@ -90,6 +106,10 @@ export const metadata: Metadata = {
 
     description:
       "Professional certified translation services for official, legal, immigration and academic documents in the UK.",
+
+    images: [
+      "/branding/gth-logo.png",
+    ],
   },
 
   robots: {
