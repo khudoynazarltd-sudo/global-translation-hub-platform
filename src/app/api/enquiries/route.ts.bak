@@ -13,10 +13,6 @@ import {
   sendManualReviewEnquiryEmail,
 } from "@/lib/email/send-manual-review-enquiry";
 
-import {
-  sendEnquiryReceivedEmail,
-} from "@/lib/email/send-enquiry-received";
-
 export const runtime = "nodejs";
 
 const ALLOWED_TYPES = new Set([
@@ -310,39 +306,9 @@ const quote =
       );
     }
 
-    if (quote.requiresManualReview) {
-      /*
-        Client acknowledgement.
-      */
-
-      try {
-        await sendEnquiryReceivedEmail({
-          to:
-            email,
-
-          clientName:
-            fullName,
-
-          sourceLanguage,
-
-          targetLanguage,
-
-          documentType,
-
-          turnaround,
-        });
-      } catch (emailError) {
-        console.error(
-          "Client enquiry acknowledgement failed:",
-          emailError
-        );
-      }
-
-
-      /*
-        Internal administration notification.
-      */
-
+    if (
+      quote.requiresManualReview
+    ) {
       try {
         await sendManualReviewEnquiryEmail({
           clientName:
@@ -366,7 +332,7 @@ const quote =
         });
       } catch (emailError) {
         console.error(
-          "Manual review administration notification failed:",
+          "Manual review notification email failed:",
           emailError
         );
       }

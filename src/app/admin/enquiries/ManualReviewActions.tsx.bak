@@ -136,7 +136,7 @@ export default function ManualReviewActions({
     setErrorMessage("");
     setCheckoutUrl("");
     setCopied(false);
-
+  
     try {
       const response =
         await fetch(
@@ -144,12 +144,12 @@ export default function ManualReviewActions({
           {
             method:
               "POST",
-
+  
             headers: {
               "Content-Type":
                 "application/json",
             },
-
+  
             body:
               JSON.stringify({
                 price,
@@ -158,12 +158,12 @@ export default function ManualReviewActions({
               }),
           }
         );
-
-
+  
+  
       const data =
         await response.json();
-
-
+  
+  
       if (
         !response.ok ||
         !data.ok
@@ -175,33 +175,33 @@ export default function ManualReviewActions({
             data.checkoutUrl
           );
         }
-
+  
         throw new Error(
           data.message ||
             "Unable to approve and email quotation."
         );
       }
-
-
+  
+  
       setCheckoutUrl(
         data.checkoutUrl
       );
-
-
+  
+  
       setMessage(
         "Quotation approved and emailed to the client."
       );
-
-
+  
+  
       router.refresh();
-
+  
     } catch (error) {
       setErrorMessage(
         error instanceof Error
           ? error.message
           : "Unable to approve and email quotation."
       );
-
+  
     } finally {
       setSaving(false);
     }
@@ -338,7 +338,7 @@ export default function ManualReviewActions({
         >
           {saving
             ? "Processing..."
-            : "Approve & Create Payment Link & Email Quotation"}
+            : "Approve & Create Payment Link"}
         </button>
 
       </div>
