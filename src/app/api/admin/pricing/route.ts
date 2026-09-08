@@ -286,7 +286,7 @@ export async function POST(
       "Language added."
     );
   }
-  
+
   if (
     action ===
     "delete_language_price"
@@ -295,15 +295,15 @@ export async function POST(
       String(
         body.id ?? ""
       ).trim();
-  
-  
+
+
     if (!id) {
       return errorResponse(
         "Price override ID is required."
       );
     }
-  
-  
+
+
     const {
       error,
     } =
@@ -316,27 +316,27 @@ export async function POST(
           "id",
           id
         );
-  
-  
+
+
     if (error) {
       console.error(
         "Language price deletion failed:",
         error
       );
-  
+
       return errorResponse(
         "Unable to delete language-specific price.",
         500
       );
     }
-  
-  
+
+
     return ok(
       "Language-specific price deleted."
     );
   }
-  
-  
+
+
 
   if (
     action ===

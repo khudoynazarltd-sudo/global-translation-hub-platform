@@ -43,7 +43,7 @@ export async function POST(
     `)
     .eq("id", id)
     .maybeSingle();
-  
+
 
   if (orderError || !order) {
     return NextResponse.json(
@@ -94,18 +94,18 @@ export async function POST(
           `)
           .eq("id", order.enquiry_id)
           .maybeSingle();
-  
+
       if (enquiryError) {
         console.error(
           "Unable to load client details for ready email:",
           enquiryError
         );
       }
-  
+
       if (enquiryDetails?.email) {
         /*
           Revoke previous client access links.
-  
+
           A fresh secure link is issued when the translation
           becomes ready for collection.
         */
@@ -116,29 +116,29 @@ export async function POST(
           })
           .eq("order_id", order.id)
           .is("revoked_at", null);
-  
+
         const clientAccessToken =
           await createOrderAccessToken(order.id);
-  
+
         const appUrl =
           process.env.NEXT_PUBLIC_APP_URL ||
           "http://localhost:3000";
-  
+
         const orderUrl =
           `${appUrl}/order?token=${encodeURIComponent(
             clientAccessToken
           )}`;
-  
+
         await sendTranslationReadyEmail({
           to: enquiryDetails.email,
-  
+
           clientName:
             enquiryDetails.full_name ||
             "Client",
-  
+
           orderReference:
             order.order_reference,
-  
+
           orderUrl,
         });
       }

@@ -203,19 +203,19 @@ function OrderPortalContent() {
           <h2 className="text-xl font-bold">
             Translation Delivery
           </h2>
-        
+
           <p className="mt-3 leading-7 text-[#607067]">
             Your completed translation will become available
             here once the order reaches the Ready stage.
           </p>
-        
+
           <div className="mt-6 rounded-2xl bg-[#f5f8f6] p-5 text-sm text-[#607067]">
             Current status:{" "}
             <strong className="text-[#13201a]">
               {readableStatus(order.status)}
             </strong>
           </div>
-        
+
           {["ready", "delivered"].includes(order.status) &&
             order.finalDocuments &&
             order.finalDocuments.length > 0 && (
@@ -229,7 +229,7 @@ function OrderPortalContent() {
                       {document.original_filename ||
                         "Completed Translation"}
                     </div>
-        
+
                     <a
                       href={`/api/client/download?token=${encodeURIComponent(
                         token!
@@ -244,7 +244,7 @@ function OrderPortalContent() {
                 ))}
               </div>
             )}
-        
+
           {["ready", "delivered"].includes(order.status) &&
             (!order.finalDocuments ||
               order.finalDocuments.length === 0) && (
@@ -253,22 +253,22 @@ function OrderPortalContent() {
                 translation file is currently available.
               </div>
             )}
-        
+
           {order.certificate?.bundleAvailable && (
             <div className="mt-6 rounded-2xl border border-[#b9d8c7] bg-[#f3faf6] p-5">
               <div className="text-sm text-[#65736b]">
                 Certified Translation Bundle
               </div>
-        
+
               <div className="mt-1 font-semibold">
                 {order.certificate.reference}
               </div>
-        
+
               <p className="mt-3 text-sm leading-6 text-[#607067]">
                 This PDF contains the Certificate of Translation Accuracy,
                 the completed translation and the source document copy.
               </p>
-        
+
               <a
                 href={`/api/client/bundle?token=${encodeURIComponent(
                   token!
@@ -280,7 +280,7 @@ function OrderPortalContent() {
             </div>
           )}
         </section>
-        
+
 
         <div className="mt-8 text-center">
           <a

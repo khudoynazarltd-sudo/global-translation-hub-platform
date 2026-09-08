@@ -68,11 +68,11 @@ export async function POST(request: Request) {
         .select("id")
         .eq("provider_payment_id", session.id)
         .maybeSingle();
-    
+
     if (existingPaymentError) {
       throw new Error("Unable to check existing payment.");
     }
-    
+
     if (existingPayment) {
       const { data: existingOrder, error: existingOrderError } =
         await supabaseAdmin
@@ -80,18 +80,18 @@ export async function POST(request: Request) {
           .select("id, order_reference")
           .eq("payment_id", existingPayment.id)
           .maybeSingle();
-    
+
       if (existingOrderError) {
         throw new Error("Unable to check existing order.");
       }
-    
+
       if (existingOrder) {
         return NextResponse.json({
           ok: true,
           orderReference: existingOrder.order_reference,
         });
       }
-    
+
       throw new Error(
         "Payment exists but the corresponding order has not been created."
       );
@@ -147,13 +147,13 @@ export async function POST(request: Request) {
     */
     const { data: orderReference, error: referenceError } =
       await supabaseAdmin.rpc("generate_gth_order_reference");
-    
+
     if (referenceError || !orderReference) {
       console.error(
         "Order reference generation failed:",
         referenceError
       );
-    
+
       throw new Error("Unable to generate order reference.");
     }
 
@@ -222,7 +222,7 @@ export async function POST(request: Request) {
       );
     }
     let clientAccessToken: string | null = null;
-    
+
     try {
       clientAccessToken = await createOrderAccessToken(order.id);
     } catch (error) {
@@ -231,7 +231,7 @@ export async function POST(request: Request) {
         error
       );
     }
-    
+
       if (clientAccessToken) {
         try {
           const { data: enquiryDetails } = await supabaseAdmin
@@ -239,17 +239,17 @@ export async function POST(request: Request) {
             .select("full_name, email")
             .eq("id", enquiryId)
             .maybeSingle();
-      
+
           if (enquiryDetails?.email) {
             const appUrl =
               process.env.NEXT_PUBLIC_APP_URL ||
               "http://localhost:3000";
-      
+
             const orderUrl =
               `${appUrl}/order?token=${encodeURIComponent(
                 clientAccessToken
               )}`;
-      
+
             await sendOrderConfirmedEmail({
               to: enquiryDetails.email,
               clientName:
@@ -268,7 +268,7 @@ export async function POST(request: Request) {
         }
       }
 
-    
+
     return NextResponse.json({
       ok: true,
       orderReference: order.order_reference,

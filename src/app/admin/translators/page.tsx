@@ -27,7 +27,7 @@ export default async function TranslatorsPage() {
       membership_body,
       membership_number,
       signature_storage_path,
-    
+
       translator_language_pairs (
         id,
         source_language,
@@ -171,7 +171,7 @@ export default async function TranslatorsPage() {
                           <div className="text-sm text-[#69766f]">
                             Language Pairs
                           </div>
-                        
+
                           <div className="mt-2 flex flex-wrap gap-2">
                             {(translator.translator_language_pairs ?? [])
                               .filter((pair) => pair.active)
@@ -185,7 +185,7 @@ export default async function TranslatorsPage() {
                                   {pair.target_language}
                                 </span>
                               ))}
-                        
+
                             {(translator.translator_language_pairs ?? [])
                               .filter((pair) => pair.active)
                               .length === 0 && (
@@ -202,15 +202,15 @@ export default async function TranslatorsPage() {
 
 
                   <div className="flex shrink-0 flex-col items-stretch gap-3">
-    
+
                     <Link
                       href={`/admin/translators/${translator.id}`}
                       className="inline-flex justify-center rounded-xl border border-[#087f5b] px-5 py-3 font-semibold text-[#087f5b]"
                     >
                       Manage Translator
                     </Link>
-    
-    
+
+
                     {!translator.auth_user_id && translator.email && (
                       <Link
                         href={`/admin/translators/${translator.id}#portal-access`}
@@ -219,25 +219,25 @@ export default async function TranslatorsPage() {
                         Invite to Portal
                       </Link>
                     )}
-    
-    
+
+
                     {translator.auth_user_id && (
                       <div className="rounded-xl bg-[#eaf8f0] px-4 py-2 text-center text-sm font-semibold text-[#087f5b]">
                         Portal Connected
                       </div>
                     )}
-    
-    
+
+
                     {!translator.auth_user_id && !translator.email && (
                       <div className="rounded-xl bg-[#fff4d8] px-4 py-2 text-center text-sm font-semibold text-[#8a6418]">
                         Email Required
                       </div>
                     )}
-    
+
                   </div>
-    
+
                 </div>
-    
+
               </section>
 
             )

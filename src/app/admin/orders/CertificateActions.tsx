@@ -137,7 +137,7 @@ export default function CertificateActions({
             Generate Certified Bundle
           </button>
         )}
-        
+
         {certificateStatus === "issued" && (
           <button
             onClick={generateBundle}

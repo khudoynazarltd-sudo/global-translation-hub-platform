@@ -227,7 +227,7 @@ export async function POST(
       await loadBrandingFile(
         "signature.png"
       );
-    
+
     const stampBytes =
       await loadBrandingFile(
         "company-stamp.png"
@@ -252,7 +252,7 @@ export async function POST(
       await outputDocument.embedPng(
         signatureBytes
       );
-    
+
     const stamp =
       await outputDocument.embedPng(
         stampBytes
@@ -261,13 +261,13 @@ export async function POST(
     const siteUrl =
       process.env.NEXT_PUBLIC_SITE_URL ||
       "http://localhost:3000";
-    
+
     const verificationUrl =
       `${siteUrl.replace(/\/$/, "")}` +
       `/verify?reference=${encodeURIComponent(
         certificate.certificate_reference
       )}`;
-    
+
     const qrDataUrl =
       await QRCode.toDataURL(
         verificationUrl,
@@ -275,72 +275,72 @@ export async function POST(
           errorCorrectionLevel: "M",
           margin: 1,
           width: 400,
-    
+
           color: {
             dark: "#102B20",
             light: "#FFFFFF",
           },
         }
       );
-    
+
     const qrBase64 =
       qrDataUrl.split(",")[1];
-    
+
     if (!qrBase64) {
       throw new Error(
         "Unable to generate certificate verification QR code."
       );
     }
-    
+
     const qrBytes =
       Buffer.from(
         qrBase64,
         "base64"
       );
-    
+
     const qrImage =
       await outputDocument.embedPng(
         qrBytes
       );
-    
+
     /*
       PAGE 1
       Certificate of Translation Accuracy
-    
+
       Generated from the same HTML template
       used by the administrative preview.
     */
-    
+
     const certificateHtml =
       await buildCertificateHtml({
         certificate,
-    
+
         order: {
           order_reference:
             order.order_reference,
         },
       });
-    
-    
+
+
     const certificatePdfBytes =
       await renderCertificatePdf(
         certificateHtml
       );
-    
-    
+
+
     const certificatePdf =
       await PDFDocument.load(
         certificatePdfBytes
       );
-    
-    
+
+
     const certificatePages =
       await outputDocument.copyPages(
         certificatePdf,
         certificatePdf.getPageIndices()
       );
-    
-    
+
+
     for (
       const certificatePage of
       certificatePages
@@ -377,39 +377,39 @@ export async function POST(
     ) {
       const copiedPage =
         copiedFinalPages[index];
-    
+
       const {
         width,
         height,
       } = copiedPage.getSize();
-    
+
       const pageStampScale =
         Math.min(
           78 / stamp.width,
           78 / stamp.height
         );
-    
+
       copiedPage.drawImage(stamp, {
         x:
           width -
           stamp.width *
             pageStampScale -
           28,
-    
+
         y: 24,
-    
+
         width:
           stamp.width *
           pageStampScale,
-    
+
         height:
           stamp.height *
           pageStampScale,
-    
+
         opacity: 0.9,
       });
-    
-   
+
+
       outputDocument.addPage(
         copiedPage
       );
@@ -559,7 +559,7 @@ export async function POST(
         .replace(/[-:]/g, "")
         .replace(/\.\d{3}Z$/, "")
         .replace("T", "-");
-    
+
     const storagePath =
       `${order.order_reference}/` +
       `${order.order_reference}-Certified-Translation-${bundleVersion}.pdf`;

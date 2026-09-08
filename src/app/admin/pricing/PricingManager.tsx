@@ -851,25 +851,25 @@ export default function PricingManager({
                       <td className="px-4 py-3">
                         {service?.name}
                       </td>
-                    
+
                       <td className="px-4 py-3">
                         {source?.name}
                       </td>
-                    
+
                       <td className="px-4 py-3">
                         {target?.name}
                       </td>
-                    
+
                       <td className="px-4 py-3 font-semibold">
                         £
                         {Number(
                           item.price
                         ).toFixed(2)}
                       </td>
-                    
+
                       <td className="px-4 py-3">
                         <div className="flex justify-end gap-2">
-                    
+
                           <button
                             type="button"
                             disabled={saving}
@@ -877,21 +877,21 @@ export default function PricingManager({
                               setPriceService(
                                 item.service_id
                               );
-                    
+
                               setPriceSource(
                                 item.source_language_id
                               );
-                    
+
                               setPriceTarget(
                                 item.target_language_id
                               );
-                    
+
                               setSpecialPrice(
                                 String(
                                   item.price
                                 )
                               );
-                    
+
                               window.scrollTo({
                                 top: 0,
                                 behavior: "smooth",
@@ -901,8 +901,8 @@ export default function PricingManager({
                           >
                             Edit
                           </button>
-                    
-                    
+
+
                           <button
                             type="button"
                             disabled={saving}
@@ -911,15 +911,15 @@ export default function PricingManager({
                                 window.confirm(
                                   "Delete this service-specific price override? The base language-pair price will be used instead."
                                 );
-                    
+
                               if (!confirmed) {
                                 return;
                               }
-                    
+
                               await api({
                                 action:
                                   "delete_language_price",
-                    
+
                                 id:
                                   item.id,
                               });
@@ -928,7 +928,7 @@ export default function PricingManager({
                           >
                             Delete
                           </button>
-                    
+
                         </div>
                       </td>
                     </tr>

@@ -124,7 +124,7 @@ export async function GET(request: Request) {
         `)
         .eq("order_id", order.id)
         .maybeSingle();
-    
+
     if (certificateError) {
       console.error(
         "Unable to load certificate for client portal:",
