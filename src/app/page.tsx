@@ -1,3 +1,21 @@
+import type {
+  Metadata,
+} from "next";
+
+
+export const metadata: Metadata = {
+  alternates: {
+    canonical:
+      "/",
+  },
+
+  openGraph: {
+    url:
+      "/",
+  },
+};
+
+
 export default function Home() {
   return (
     <main className="min-h-screen bg-[#f8faf8] text-[#13201a]">

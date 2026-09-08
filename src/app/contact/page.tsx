@@ -8,11 +8,17 @@ import LegalPageShell, {
 
 
 export const metadata: Metadata = {
-  title: "Contact",
+  title:
+    "Contact",
+
   description:
     "Contact GLOBAL TRANSLATION HUB, operated by KHUDOYNAZAR LTD in Cambridge, United Kingdom.",
-};
 
+  alternates: {
+    canonical:
+      "/contact",
+  },
+};
 
 export default function ContactPage() {
   return (

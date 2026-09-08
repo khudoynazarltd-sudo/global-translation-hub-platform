@@ -8,11 +8,17 @@ import LegalPageShell, {
 
 
 export const metadata: Metadata = {
-  title: "Terms & Conditions",
+  title:
+    "Terms & Conditions",
+
   description:
     "Terms and Conditions for GLOBAL TRANSLATION HUB translation services.",
-};
 
+  alternates: {
+    canonical:
+      "/terms",
+  },
+};
 
 export default function TermsPage() {
   return (

@@ -8,11 +8,17 @@ import LegalPageShell, {
 
 
 export const metadata: Metadata = {
-  title: "Privacy Policy",
+  title:
+    "Privacy Policy",
+
   description:
     "Privacy Policy for GLOBAL TRANSLATION HUB, operated by KHUDOYNAZAR LTD.",
-};
 
+  alternates: {
+    canonical:
+      "/privacy",
+  },
+};
 
 export default function PrivacyPage() {
   return (

@@ -56,10 +56,6 @@ export const metadata: Metadata = {
   publisher:
     "KHUDOYNAZAR LTD",
 
-  alternates: {
-    canonical:
-      "/",
-  },
 
   openGraph: {
     type:
@@ -67,9 +63,6 @@ export const metadata: Metadata = {
 
     locale:
       "en_GB",
-
-    url:
-      "/",
 
     siteName:
       "GLOBAL TRANSLATION HUB",

@@ -8,11 +8,17 @@ import LegalPageShell, {
 
 
 export const metadata: Metadata = {
-  title: "Cancellation & Refund Policy",
+  title:
+    "Cancellation & Refund Policy",
+
   description:
     "Cancellation and Refund Policy for GLOBAL TRANSLATION HUB.",
-};
 
+  alternates: {
+    canonical:
+      "/refunds",
+  },
+};
 
 export default function RefundsPage() {
   return (
