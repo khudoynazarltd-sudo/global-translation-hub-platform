@@ -996,8 +996,18 @@ export default function QuotePage() {
         );
       }
 
+      if (typeof window.gtag === "function") {
+        window.gtag("event", "conversion", {
+          send_to:
+            "AW-18438745253/_lkMCI700_EcEKXZo9hE",
+          value: 1.0,
+          currency: "GBP",
+        });
+      }
+
       setResult(data);
       goTo("result");
+
     } catch (error) {
       const message =
         error instanceof Error

@@ -320,6 +320,15 @@ export default function QuotePage() {
   const hasMediaOutput =
     mediaOutputOptions.length > 0;
 
+  const selectedDocumentCount =
+    documentItems.filter(
+      (item) => item.file !== null
+    ).length;
+
+  const multipleDocumentsRequireManualReview =
+    !isMediaService &&
+    selectedDocumentCount > 1;
+
   const [authorised, setAuthorised] = useState(false);
   const [authenticityAccepted, setAuthenticityAccepted] = useState(false);
   const [termsAccepted, setTermsAccepted] = useState(false);
@@ -508,6 +517,19 @@ export default function QuotePage() {
     }
 
 
+    if (
+      multipleDocumentsRequireManualReview
+    ) {
+      setQuotePreview({
+        loading: false,
+        requiresManualReview: true,
+        amount: null,
+        currency: "GBP",
+      });
+
+      return;
+    }
+
     const controller =
       new AbortController();
 
@@ -623,6 +645,7 @@ export default function QuotePage() {
     documentType,
     turnaround,
     sourceAndTargetAreSame,
+    multipleDocumentsRequireManualReview,
   ]);
 
   const canSubmit = useMemo(() => {
@@ -1881,8 +1904,9 @@ export default function QuotePage() {
                     </div>
 
                     <p className="mt-2 text-sm leading-6 text-[#69766f]">
-                      We will review the document and prepare
-                      a quotation before payment.
+                      {multipleDocumentsRequireManualReview
+                        ? "We will review all uploaded documents and prepare a combined quotation before payment."
+                        : "We will review the document and prepare a quotation before payment."}
                     </p>
 
                   </div>
