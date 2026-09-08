@@ -91,6 +91,19 @@ type QuotePreview = {
   currency: string;
 };
 
+type DocumentItem = {
+  id: string;
+  file: File | null;
+  documentType: string;
+  label: string;
+  pageCount: string;
+};
+
+type MediaItem = {
+  id: string;
+  file: File | null;
+};
+
 function formatPrice(value: number) {
   return new Intl.NumberFormat("en-GB", {
     style: "currency",
@@ -102,7 +115,119 @@ export default function QuotePage() {
   const [step, setStep] =
     useState<Step>("upload");
 
-  const [file, setFile] = useState<File | null>(null);
+  const [documentItems, setDocumentItems] =
+    useState<DocumentItem[]>([
+      {
+        id: "document-1",
+        file: null,
+        documentType: "",
+        label: "",
+        pageCount: "",
+      },
+    ]);
+
+  const addDocumentItem = () => {
+    setDocumentItems(
+      (current) => [
+        ...current,
+        {
+          id: crypto.randomUUID(),
+          file: null,
+          documentType: "",
+          label: "",
+          pageCount: "",
+        },
+      ]
+    );
+  };
+
+  const removeDocumentItem = (
+    id: string
+  ) => {
+    setDocumentItems(
+      (current) => {
+        if (current.length <= 1) {
+          return current;
+        }
+
+        return current.filter(
+          (item) => item.id !== id
+        );
+      }
+    );
+  };
+
+  const updateDocumentFile = (
+    id: string,
+    nextFile: File | null
+  ) => {
+    setDocumentItems(
+      (current) =>
+        current.map(
+          (item) =>
+            item.id === id
+              ? {
+                  ...item,
+                  file: nextFile,
+                }
+              : item
+        )
+    );
+  };
+
+  const updateDocumentType = (
+    id: string,
+    value: string
+  ) => {
+    setDocumentItems(
+      (current) =>
+        current.map(
+          (item) =>
+            item.id === id
+              ? {
+                  ...item,
+                  documentType: value,
+                }
+              : item
+        )
+    );
+  };
+
+  const updateDocumentLabel = (
+    id: string,
+    value: string
+  ) => {
+    setDocumentItems(
+      (current) =>
+        current.map(
+          (item) =>
+            item.id === id
+              ? {
+                  ...item,
+                  label: value,
+                }
+              : item
+        )
+    );
+  };
+
+  const updateDocumentPageCount = (
+    id: string,
+    value: string
+  ) => {
+    setDocumentItems(
+      (current) =>
+        current.map(
+          (item) =>
+            item.id === id
+              ? {
+                  ...item,
+                  pageCount: value,
+                }
+              : item
+        )
+    );
+  };
 
   const [sourceLanguage, setSourceLanguage] = useState("");
   const [targetLanguage, setTargetLanguage] = useState("English");
@@ -114,8 +239,64 @@ export default function QuotePage() {
   const [email, setEmail] = useState("");
   const [telephone, setTelephone] = useState("");
 
-  const [mediaFile, setMediaFile] =
-    useState<File | null>(null);
+  const [mediaItems, setMediaItems] =
+    useState<MediaItem[]>([
+      {
+        id: "media-1",
+        file: null,
+      },
+    ]);
+
+  const addMediaItem = () => {
+    setMediaItems(
+      (current) => [
+        ...current,
+        {
+          id: crypto.randomUUID(),
+          file: null,
+        },
+      ]
+    );
+  };
+
+  const removeMediaItem = (
+    id: string
+  ) => {
+    setMediaItems(
+      (current) => {
+        const remaining = current.filter(
+          (item) => item.id !== id
+        );
+
+        return remaining.length > 0
+          ? remaining
+          : [
+              {
+                id: crypto.randomUUID(),
+                file: null,
+              },
+            ];
+      }
+    );
+  };
+
+  const updateMediaFile = (
+    id: string,
+    nextFile: File | null
+  ) => {
+    setMediaItems(
+      (current) =>
+        current.map(
+          (item) =>
+            item.id === id
+              ? {
+                  ...item,
+                  file: nextFile,
+                }
+              : item
+        )
+    );
+  };
 
   const [mediaExternalUrl, setMediaExternalUrl] =
     useState("");
@@ -131,10 +312,10 @@ export default function QuotePage() {
     "Audio / Video Translation";
 
   const hasMediaSource =
-    Boolean(
-      mediaFile ||
-      mediaExternalUrl.trim()
-    );
+    mediaItems.some(
+      (item) => item.file !== null
+    ) ||
+    mediaExternalUrl.trim() !== "";
 
   const hasMediaOutput =
     mediaOutputOptions.length > 0;
@@ -190,7 +371,15 @@ export default function QuotePage() {
       service ===
       "audio-video"
     ) {
-      setFile(null);
+      setDocumentItems([
+        {
+          id: "document-1",
+          file: null,
+          documentType: "",
+          label: "",
+          pageCount: "",
+        },
+      ]);
 
       setDocumentType(
         "Audio / Video Translation"
@@ -210,7 +399,12 @@ export default function QuotePage() {
     ) {
       setDocumentType("");
 
-      setMediaFile(null);
+      setMediaItems([
+        {
+          id: "media-1",
+          file: null,
+        },
+      ]);
       setMediaExternalUrl("");
       setMediaOutputOptions([]);
       setMediaNotes("");
@@ -227,17 +421,6 @@ export default function QuotePage() {
 
   useEffect(() => {
     let active = true;
-
-  const isMediaService =
-    documentType ===
-    "Audio / Video Translation";
-
-  const hasMediaSource =
-    mediaFile !== null ||
-    mediaExternalUrl.trim() !== "";
-
-  const hasMediaOutput =
-    mediaOutputOptions.length > 0;
 
     async function loadPricingOptions() {
       try {
@@ -448,7 +631,9 @@ export default function QuotePage() {
         isMediaService
           ? hasMediaSource &&
             hasMediaOutput
-          : file !== null
+          : documentItems.some(
+              (item) => item.file !== null
+            )
       ) &&
       fullName.trim() !== "" &&
       email.trim() !== "" &&
@@ -463,7 +648,7 @@ export default function QuotePage() {
       termsAccepted
     );
   }, [
-    file,
+    documentItems,
     fullName,
     email,
     sourceLanguage,
@@ -487,7 +672,15 @@ export default function QuotePage() {
 
   function restart() {
     setStep("upload");
-    setFile(null);
+    setDocumentItems([
+      {
+        id: "document-1",
+        file: null,
+        documentType: "",
+        label: "",
+        pageCount: "",
+      },
+    ]);
     setSourceLanguage("");
     setTargetLanguage("English");
     setDocumentType("");
@@ -496,7 +689,12 @@ export default function QuotePage() {
     setFullName("");
     setEmail("");
     setTelephone("");
-    setMediaFile(null);
+    setMediaItems([
+      {
+        id: "media-1",
+        file: null,
+      },
+    ]);
     setMediaExternalUrl("");
     setMediaOutputOptions([]);
     setMediaNotes("");
@@ -624,9 +822,29 @@ export default function QuotePage() {
       return;
     }
 
+    const selectedDocuments =
+      documentItems.filter(
+        (item): item is DocumentItem & { file: File } =>
+          item.file instanceof File
+      );
+
+    const selectedMediaItems =
+      mediaItems.filter(
+        (item): item is MediaItem & { file: File } =>
+          item.file instanceof File
+      );
+
     if (
       !isMediaService &&
-      !file
+      selectedDocuments.length === 0
+    ) {
+      return;
+    }
+
+    if (
+      isMediaService &&
+      selectedMediaItems.length === 0 &&
+      mediaExternalUrl.trim() === ""
     ) {
       return;
     }
@@ -635,103 +853,123 @@ export default function QuotePage() {
     setSubmissionError("");
 
     try {
-      let uploadedMedia:
-        {
-          path: string;
-          originalFilename: string;
-          mimeType: string;
-          fileSize: number;
-        } | null =
-        null;
+      const uploadedMedia: Array<{
+        path: string;
+        originalFilename: string;
+        mimeType: string;
+        fileSize: number;
+      }> = [];
 
-      if (
-        isMediaService &&
-        mediaFile
-      ) {
-        uploadedMedia =
-          await uploadMediaFile(
-            mediaFile
+      if (isMediaService) {
+        for (const item of selectedMediaItems) {
+          uploadedMedia.push(
+            await uploadMediaFile(item.file)
           );
+        }
       }
 
       const formData =
         new FormData();
 
-    if (
-      !isMediaService &&
-      file
-    ) {
-      formData.append(
-        "file",
-        file
-      );
-    }
-
-    formData.append(
-      "fullName",
-      fullName.trim()
-    );
-      formData.append("email", email.trim());
-      formData.append("telephone", telephone.trim());
-      formData.append("sourceLanguage", sourceLanguage);
-      formData.append("targetLanguage", targetLanguage);
-      formData.append("documentType", documentType);
-      formData.append("purpose", purpose);
-      formData.append("turnaround", turnaround);
-
-    if (isMediaService) {
-      formData.append(
-        "mediaExternalUrl",
-        mediaExternalUrl.trim()
-      );
-
-      formData.append(
-        "mediaOutputOptions",
-        JSON.stringify(
-          mediaOutputOptions
-        )
-      );
-
-      formData.append(
-        "mediaNotes",
-        mediaNotes.trim()
-      );
-
-      if (uploadedMedia) {
-        formData.append(
-          "mediaStoragePath",
-          uploadedMedia.path
-        );
+      if (!isMediaService) {
+        for (const item of selectedDocuments) {
+          formData.append(
+            "files",
+            item.file
+          );
+        }
 
         formData.append(
-          "mediaOriginalFilename",
-          uploadedMedia.originalFilename
-        );
-
-        formData.append(
-          "mediaMimeType",
-          uploadedMedia.mimeType
-        );
-
-        formData.append(
-          "mediaFileSize",
-          String(
-            uploadedMedia.fileSize
+          "documentItems",
+          JSON.stringify(
+            selectedDocuments.map(
+              (item) => ({
+                documentType:
+                  item.documentType.trim(),
+                label:
+                  item.label.trim(),
+                pageCount:
+                  item.pageCount.trim(),
+              })
+            )
           )
         );
       }
-    }
 
-      const response = await fetch("/api/enquiries", {
-        method: "POST",
-        body: formData,
-      });
+      formData.append(
+        "fullName",
+        fullName.trim()
+      );
+      formData.append(
+        "email",
+        email.trim()
+      );
+      formData.append(
+        "telephone",
+        telephone.trim()
+      );
+      formData.append(
+        "sourceLanguage",
+        sourceLanguage
+      );
+      formData.append(
+        "targetLanguage",
+        targetLanguage
+      );
+      formData.append(
+        "documentType",
+        documentType
+      );
+      formData.append(
+        "purpose",
+        purpose
+      );
+      formData.append(
+        "turnaround",
+        turnaround
+      );
 
-      const data: SubmissionResult = await response.json();
+      if (isMediaService) {
+        formData.append(
+          "mediaExternalUrl",
+          mediaExternalUrl.trim()
+        );
+
+        formData.append(
+          "mediaOutputOptions",
+          JSON.stringify(
+            mediaOutputOptions
+          )
+        );
+
+        formData.append(
+          "mediaNotes",
+          mediaNotes.trim()
+        );
+
+        formData.append(
+          "mediaItems",
+          JSON.stringify(
+            uploadedMedia
+          )
+        );
+      }
+
+      const response = await fetch(
+        "/api/enquiries",
+        {
+          method: "POST",
+          body: formData,
+        }
+      );
+
+      const data: SubmissionResult =
+        await response.json();
 
       if (!response.ok || !data.ok) {
         throw new Error(
-          data.message || "Unable to submit your translation enquiry."
+          data.message ||
+            "Unable to submit your translation enquiry."
         );
       }
 
@@ -883,50 +1121,217 @@ export default function QuotePage() {
                 </p>
 
 
-                <label className="mt-6 block cursor-pointer rounded-2xl border-2 border-dashed border-[#bed2c5] bg-[#f8fbf9] p-10 text-center transition hover:border-[#087f5b]">
-                  <input
-                    type="file"
-                    accept=".pdf,.jpg,.jpeg,.png"
-                    className="hidden"
-                    onChange={(event) => {
-                      const selected =
-                        event.target.files?.[0] ??
-                        null;
+                <div className="mt-6 space-y-5">
+                  {documentItems.map(
+                    (item, index) => (
+                      <div
+                        key={item.id}
+                        className="rounded-2xl border border-[#dce6df] bg-[#f8fbf9] p-5"
+                      >
+                        <div className="flex items-center justify-between gap-4">
+                          <div className="font-semibold text-[#173025]">
+                            Document {index + 1}
+                          </div>
 
-                      setFile(selected);
+                          {documentItems.length > 1 && (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                removeDocumentItem(
+                                  item.id
+                                )
+                              }
+                              className="text-sm font-semibold text-[#9a3f2f] hover:underline"
+                            >
+                              Remove
+                            </button>
+                          )}
+                        </div>
 
-                      if (selected) {
-                        setDocumentType("");
-                        setMediaFile(null);
-                        setMediaExternalUrl("");
-                        setMediaOutputOptions([]);
-                        setMediaNotes("");
-                      }
-                    }}
-                  />
+                        <label className="mt-4 block cursor-pointer rounded-xl border-2 border-dashed border-[#bed2c5] bg-white p-6 text-center transition hover:border-[#087f5b]">
+                          <input
+                            type="file"
+                            multiple
+                            accept=".pdf,.jpg,.jpeg,.png"
+                            className="hidden"
+                            onChange={(event) => {
+                              const selectedFiles =
+                                Array.from(
+                                  event.target.files ?? []
+                                );
 
-                  <div className="text-lg font-semibold text-[#173025]">
-                    Choose PDF, JPG, JPEG or PNG
-                  </div>
+                              if (
+                                selectedFiles.length === 0
+                              ) {
+                                updateDocumentFile(
+                                  item.id,
+                                  null
+                                );
+                                return;
+                              }
 
-                  <p className="mt-2 text-sm text-[#69766f]">
-                    Maximum file size: 15 MB.
-                  </p>
-                </label>
+                              setDocumentItems(
+                                (current) => {
+                                  const currentIndex =
+                                    current.findIndex(
+                                      (currentItem) =>
+                                        currentItem.id === item.id
+                                    );
 
+                                  if (currentIndex < 0) {
+                                    return current;
+                                  }
 
-                {file && (
-                  <div className="mt-5 rounded-xl bg-[#eef8f2] px-5 py-4 text-sm">
-                    Selected file:{" "}
-                    <strong>
-                      {file.name}
-                    </strong>
-                  </div>
-                )}
+                                  const replacementItems =
+                                    selectedFiles.map(
+                                      (selectedFile, fileIndex) =>
+                                        fileIndex === 0
+                                          ? {
+                                              ...current[currentIndex],
+                                              file: selectedFile,
+                                            }
+                                          : {
+                                              id: crypto.randomUUID(),
+                                              file: selectedFile,
+                                              documentType: "",
+                                              label: "",
+                                              pageCount: "",
+                                            }
+                                    );
 
+                                  return [
+                                    ...current.slice(0, currentIndex),
+                                    ...replacementItems,
+                                    ...current.slice(currentIndex + 1),
+                                  ];
+                                }
+                              );
+
+                              setDocumentType("");
+                              setMediaItems([
+                                {
+                                  id: "media-1",
+                                  file: null,
+                                },
+                              ]);
+                              setMediaExternalUrl("");
+                              setMediaOutputOptions([]);
+                              setMediaNotes("");
+
+                              event.target.value = "";
+                            }}
+                          />
+
+                          <div className="font-semibold text-[#173025]">
+                            {item.file
+                              ? item.file.name
+                              : "Choose one or multiple PDF, JPG, JPEG or PNG files"}
+                          </div>
+
+                          <p className="mt-2 text-sm text-[#69766f]">
+                            You can select several files at once. Maximum file size: 15 MB per file.
+                          </p>
+                        </label>
+
+                        <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                          <div>
+                            <label className="mb-2 block text-sm font-semibold">
+                              Document Type
+                            </label>
+
+                            <select
+                              value={item.documentType}
+                              onChange={(event) =>
+                                updateDocumentType(
+                                  item.id,
+                                  event.target.value
+                                )
+                              }
+                              className="w-full rounded-xl border border-[#d7e1da] bg-white px-4 py-3 outline-none focus:border-[#087f5b]"
+                            >
+                              <option value="">
+                                Optional
+                              </option>
+
+                              {(
+                                pricingOptions?.services.map(
+                                  (service) => service.name
+                                ) ?? documentTypes
+                              )
+                                .filter(
+                                  (name) =>
+                                    name !==
+                                    "Audio / Video Translation"
+                                )
+                                .map((name) => (
+                                  <option
+                                    key={name}
+                                    value={name}
+                                  >
+                                    {name}
+                                  </option>
+                                ))}
+                            </select>
+                          </div>
+
+                          <div>
+                            <label className="mb-2 block text-sm font-semibold">
+                              Number of Pages
+                            </label>
+
+                            <input
+                              type="number"
+                              min="1"
+                              value={item.pageCount}
+                              onChange={(event) =>
+                                updateDocumentPageCount(
+                                  item.id,
+                                  event.target.value
+                                )
+                              }
+                              placeholder="Optional"
+                              className="w-full rounded-xl border border-[#d7e1da] bg-white px-4 py-3 outline-none focus:border-[#087f5b]"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="mt-4">
+                          <label className="mb-2 block text-sm font-semibold">
+                            Description / Notes
+                          </label>
+
+                          <input
+                            type="text"
+                            value={item.label}
+                            onChange={(event) =>
+                              updateDocumentLabel(
+                                item.id,
+                                event.target.value
+                              )
+                            }
+                            placeholder="Optional, e.g. passport visa pages"
+                            className="w-full rounded-xl border border-[#d7e1da] bg-white px-4 py-3 outline-none focus:border-[#087f5b]"
+                          />
+                        </div>
+                      </div>
+                    )
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={addDocumentItem}
+                    className="rounded-lg border border-[#087f5b] bg-white px-5 py-3 font-semibold text-[#087f5b] hover:bg-[#eef8f2]"
+                  >
+                    + Add another document
+                  </button>
+                </div>
 
                 <button
-                  disabled={!file}
+                  disabled={
+                    !documentItems.some(
+                      (item) => item.file !== null
+                    )
+                  }
                   onClick={() =>
                     goTo("language")
                   }
@@ -996,7 +1401,15 @@ export default function QuotePage() {
                 <button
                   type="button"
                   onClick={() => {
-                    setFile(null);
+                    setDocumentItems([
+                      {
+                        id: "document-1",
+                        file: null,
+                        documentType: "",
+                        label: "",
+                        pageCount: "",
+                      },
+                    ]);
 
                     setDocumentType(
                       "Audio / Video Translation"
@@ -1168,38 +1581,123 @@ export default function QuotePage() {
                     OneDrive or WeTransfer link instead.
                   </p>
 
-                  <div className="mt-6">
-                    <label className="mb-2 block text-sm font-semibold">
-                      Audio / Video
-                    </label>
+                  <div className="mt-6 space-y-4">
+                    <div className="text-sm font-semibold">
+                      Audio / Video files
+                    </div>
 
-                    <input
-                      type="file"
-                      accept=".mp3,.wav,.m4a,.aac,.mp4,.mov,.webm"
-                      onChange={(event) =>
-                        setMediaFile(
-                          event.target.files?.[0] ??
-                            null
-                        )
-                      }
-                      className="block w-full rounded-xl border border-[#d7e1da] bg-white p-3"
-                    />
+                    {mediaItems.map(
+                      (item, index) => (
+                        <div
+                          key={item.id}
+                          className="rounded-xl border border-[#d7e1da] bg-white p-4"
+                        >
+                          <div className="flex items-center justify-between gap-4">
+                            <div className="text-sm font-semibold text-[#173025]">
+                              Media file {index + 1}
+                            </div>
 
-                    {mediaFile && (
-                      <div className="mt-2 text-sm text-[#607067]">
-                        Selected:{" "}
-                        <strong>
-                          {mediaFile.name}
-                        </strong>
-                        {" · "}
-                        {(
-                          mediaFile.size /
-                          1024 /
-                          1024
-                        ).toFixed(2)}
-                        {" MB"}
-                      </div>
+                            {(item.file || mediaItems.length > 1) && (
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  removeMediaItem(
+                                    item.id
+                                  )
+                                }
+                                className="text-sm font-semibold text-[#9a3f2f] hover:underline"
+                              >
+                                Remove
+                              </button>
+                            )}
+                          </div>
+
+                          <input
+                            type="file"
+                            multiple
+                            accept=".mp3,.wav,.m4a,.aac,.mp4,.mov,.webm"
+                            onChange={(event) => {
+                              const selectedFiles =
+                                Array.from(
+                                  event.target.files ?? []
+                                );
+
+                              if (selectedFiles.length === 0) {
+                                updateMediaFile(
+                                  item.id,
+                                  null
+                                );
+                                return;
+                              }
+
+                              setMediaItems(
+                                (current) => {
+                                  const currentIndex =
+                                    current.findIndex(
+                                      (currentItem) =>
+                                        currentItem.id === item.id
+                                    );
+
+                                  if (currentIndex < 0) {
+                                    return current;
+                                  }
+
+                                  const replacementItems =
+                                    selectedFiles.map(
+                                      (selectedFile, fileIndex) =>
+                                        fileIndex === 0
+                                          ? {
+                                              ...current[currentIndex],
+                                              file: selectedFile,
+                                            }
+                                          : {
+                                              id: crypto.randomUUID(),
+                                              file: selectedFile,
+                                            }
+                                    );
+
+                                  return [
+                                    ...current.slice(0, currentIndex),
+                                    ...replacementItems,
+                                    ...current.slice(currentIndex + 1),
+                                  ];
+                                }
+                              );
+
+                              event.target.value = "";
+                            }}
+                            className="mt-3 block w-full rounded-xl border border-[#d7e1da] bg-white p-3"
+                          />
+
+                          {item.file && (
+                            <div className="mt-2 text-sm text-[#607067]">
+                              <strong>
+                                {item.file.name}
+                              </strong>
+                              {" · "}
+                              {(
+                                item.file.size /
+                                1024 /
+                                1024
+                              ).toFixed(2)}
+                              {" MB"}
+                            </div>
+                          )}
+                        </div>
+                      )
                     )}
+
+                    <button
+                      type="button"
+                      onClick={addMediaItem}
+                      className="rounded-lg border border-[#087f5b] bg-white px-5 py-3 font-semibold text-[#087f5b] hover:bg-[#eef8f2]"
+                    >
+                      + Add another audio / video file
+                    </button>
+
+                    <p className="text-xs leading-5 text-[#69766f]">
+                      You can select several files at once. Maximum file size: 50 MB per file.
+                    </p>
                   </div>
 
 
@@ -1579,10 +2077,12 @@ export default function QuotePage() {
 
               <p className="mt-3 leading-7 text-[#607067]">
                 {isMediaService
-                  ? mediaFile
-                    ? "Please check your information before submitting. Your audio or video file will only be uploaded after you press Submit Enquiry."
+                  ? mediaItems.some(
+                      (item) => item.file !== null
+                    )
+                    ? "Please check your information before submitting. Your audio or video files will only be uploaded after you press Submit Enquiry."
                     : "Please check your information before submitting your enquiry."
-                  : "Please check your information before submitting. Your document will only be uploaded after you press Submit Enquiry."}
+                  : "Please check your information before submitting. Your documents will only be uploaded after you press Submit Enquiry."}
               </p>
               <div className="mt-8 divide-y divide-[#e5ebe7] rounded-2xl border border-[#dce6df]">
                 <ReviewRow
@@ -1620,19 +2120,53 @@ export default function QuotePage() {
 
                 {isMediaService ? (
                   <>
-                    <ReviewRow
-                      label={
-                        mediaFile
-                          ? "Media File"
-                          : "External File Link"
-                      }
-                      value={
-                        mediaFile
-                          ? mediaFile.name
-                          : mediaExternalUrl
-                      }
-                      onEdit={() => goTo("document")}
-                    />
+                    {mediaItems.some(
+                      (item) => item.file !== null
+                    ) && (
+                      <div className="px-5 py-5">
+                        <div className="text-sm text-[#65736b]">
+                          Media files
+                        </div>
+
+                        <div className="mt-3 space-y-3">
+                          {mediaItems
+                            .filter(
+                              (item) => item.file !== null
+                            )
+                            .map((item, index) => (
+                              <div
+                                key={item.id}
+                                className="rounded-xl border border-[#dce6df] bg-[#f8fbf9] p-4"
+                              >
+                                <div className="font-semibold">
+                                  {index + 1}. {item.file?.name}
+                                </div>
+                                <div className="mt-1 text-sm text-[#607067]">
+                                  {item.file
+                                    ? `${(item.file.size / 1024 / 1024).toFixed(2)} MB`
+                                    : ""}
+                                </div>
+                              </div>
+                            ))}
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => goTo("document")}
+                          className="mt-4 text-sm font-semibold text-[#087f5b]"
+                        >
+                          Edit
+                        </button>
+                      </div>
+                    )}
+
+                    {mediaExternalUrl.trim() !== "" && (
+                      <ReviewRow
+                        label="External File Link"
+                        value={mediaExternalUrl}
+                        onEdit={() => goTo("document")}
+                      />
+                    )}
 
                     <ReviewRow
                       label="Requested Output"
@@ -1653,11 +2187,54 @@ export default function QuotePage() {
                     )}
                   </>
                 ) : (
-                  <ReviewRow
-                    label="File"
-                    value={file?.name ?? ""}
-                    onEdit={() => goTo("upload")}
-                  />
+                  <div className="px-5 py-5">
+                    <div className="text-sm text-[#65736b]">
+                      Documents
+                    </div>
+
+                    <div className="mt-3 space-y-3">
+                      {documentItems
+                        .filter(
+                          (item) => item.file !== null
+                        )
+                        .map((item, index) => (
+                          <div
+                            key={item.id}
+                            className="rounded-xl border border-[#dce6df] bg-[#f8fbf9] p-4"
+                          >
+                            <div className="font-semibold">
+                              {index + 1}. {item.file?.name}
+                            </div>
+
+                            {item.documentType && (
+                              <div className="mt-1 text-sm text-[#607067]">
+                                Type: {item.documentType}
+                              </div>
+                            )}
+
+                            {item.pageCount && (
+                              <div className="mt-1 text-sm text-[#607067]">
+                                Pages: {item.pageCount}
+                              </div>
+                            )}
+
+                            {item.label && (
+                              <div className="mt-1 text-sm text-[#607067]">
+                                Notes: {item.label}
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => goTo("upload")}
+                      className="mt-4 text-sm font-semibold text-[#087f5b]"
+                    >
+                      Edit
+                    </button>
+                  </div>
                 )}
               </div>
 

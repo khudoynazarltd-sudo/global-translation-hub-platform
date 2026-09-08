@@ -1,6 +1,12 @@
-import { NextResponse } from "next/server";
 import { randomUUID } from "crypto";
-import { supabaseAdmin } from "@/lib/supabase/admin";
+import { NextResponse } from "next/server";
+
+import {
+  sendEnquiryReceivedEmail,
+} from "@/lib/email/send-enquiry-received";
+import {
+  sendManualReviewEnquiryEmail,
+} from "@/lib/email/send-manual-review-enquiry";
 import {
   PURPOSES,
   TURNAROUNDS,
@@ -8,14 +14,7 @@ import {
 import {
   calculateServerQuote,
 } from "@/lib/pricing/server";
-
-import {
-  sendManualReviewEnquiryEmail,
-} from "@/lib/email/send-manual-review-enquiry";
-
-import {
-  sendEnquiryReceivedEmail,
-} from "@/lib/email/send-enquiry-received";
+import { supabaseAdmin } from "@/lib/supabase/admin";
 
 export const runtime = "nodejs";
 
@@ -25,9 +24,19 @@ const ALLOWED_TYPES = new Set([
   "image/png",
 ]);
 
-const MAX_FILE_SIZE = 15 * 1024 * 1024;
+const MAX_FILE_SIZE =
+  15 * 1024 * 1024;
 
-function getExtension(mimeType: string) {
+type MediaUploadItem = {
+  path: string;
+  originalFilename: string;
+  mimeType: string;
+  fileSize: number;
+};
+
+function getExtension(
+  mimeType: string
+) {
   switch (mimeType) {
     case "application/pdf":
       return "pdf";
@@ -40,32 +49,139 @@ function getExtension(mimeType: string) {
   }
 }
 
-function allowed(value: string, values: readonly string[]) {
+function allowed(
+  value: string,
+  values: readonly string[]
+) {
   return values.includes(value);
 }
 
-export async function POST(request: Request) {
-  let enquiryId: string | null = null;
-  let storagePath: string | null = null;
+function parseMediaItems(
+  raw: FormDataEntryValue | null
+): MediaUploadItem[] {
+  if (raw == null) {
+    return [];
+  }
 
   try {
-    const formData = await request.formData();
-    const file = formData.get("file");
+    const parsed = JSON.parse(
+      String(raw)
+    );
 
-    const fullName = String(formData.get("fullName") ?? "").trim();
-    const email = String(formData.get("email") ?? "").trim();
-    const telephone = String(formData.get("telephone") ?? "").trim();
+    if (!Array.isArray(parsed)) {
+      return [];
+    }
+
+    return parsed
+      .map((item) => {
+        if (
+          !item ||
+          typeof item !== "object"
+        ) {
+          return null;
+        }
+
+        const record = item as Record<
+          string,
+          unknown
+        >;
+
+        const path = String(
+          record.path ?? ""
+        ).trim();
+        const originalFilename = String(
+          record.originalFilename ?? ""
+        ).trim();
+        const mimeType = String(
+          record.mimeType ?? ""
+        ).trim();
+        const fileSize = Number(
+          record.fileSize ?? 0
+        );
+
+        if (!path) {
+          return null;
+        }
+
+        return {
+          path,
+          originalFilename,
+          mimeType,
+          fileSize,
+        };
+      })
+      .filter(
+        (
+          item
+        ): item is MediaUploadItem =>
+          item !== null
+      );
+  } catch {
+    return [];
+  }
+}
+
+export async function POST(
+  request: Request
+) {
+  let enquiryId: string | null =
+    null;
+
+  const storagePathsToCleanup:
+    string[] = [];
+
+  try {
+    const formData =
+      await request.formData();
+
+    const documentFiles =
+      formData
+        .getAll("files")
+        .filter(
+          (
+            item
+          ): item is File =>
+            item instanceof File
+        );
+
+    // Backward compatibility with the old single-file client.
+    if (documentFiles.length === 0) {
+      const legacyFile =
+        formData.get("file");
+
+      if (legacyFile instanceof File) {
+        documentFiles.push(
+          legacyFile
+        );
+      }
+    }
+
+    const fullName = String(
+      formData.get("fullName") ?? ""
+    ).trim();
+    const email = String(
+      formData.get("email") ?? ""
+    ).trim();
+    const telephone = String(
+      formData.get("telephone") ?? ""
+    ).trim();
 
     const sourceLanguage = String(
-      formData.get("sourceLanguage") ?? ""
+      formData.get(
+        "sourceLanguage"
+      ) ?? ""
     ).trim();
 
     const targetLanguage = String(
-      formData.get("targetLanguage") ?? ""
+      formData.get(
+        "targetLanguage"
+      ) ?? ""
     ).trim();
 
     const documentType = String(
-      formData.get("documentType") ?? ""
+      formData.get(
+        "documentType"
+      ) ?? ""
     ).trim();
 
     const purpose = String(
@@ -73,79 +189,100 @@ export async function POST(request: Request) {
     ).trim();
 
     const turnaround = String(
-      formData.get("turnaround") ?? ""
+      formData.get(
+        "turnaround"
+      ) ?? ""
     ).trim();
 
-    const mediaExternalUrl = String(
-      formData.get("mediaExternalUrl") ?? ""
-    ).trim();
-
-    if (
-      mediaExternalUrl &&
-      !/^https?:\/\//i.test(
-        mediaExternalUrl
-      )
-    ) {
-      return NextResponse.json(
-        {
-          ok: false,
-          message:
-            "Please provide a valid HTTP or HTTPS file-sharing link.",
-        },
-        {
-          status: 400,
-        }
-      );
-    }
-
-    const mediaStoragePath = String(
-      formData.get("mediaStoragePath") ?? ""
-    ).trim();
-
-    const mediaOriginalFilename = String(
-      formData.get("mediaOriginalFilename") ?? ""
-    ).trim();
-
-    const mediaMimeType = String(
-      formData.get("mediaMimeType") ?? ""
-    ).trim();
-
-    const mediaFileSize = Number(
-      formData.get("mediaFileSize") ?? 0
-    );
+    const mediaExternalUrl =
+      String(
+        formData.get(
+          "mediaExternalUrl"
+        ) ?? ""
+      ).trim();
 
     const mediaNotes = String(
-      formData.get("mediaNotes") ?? ""
+      formData.get(
+        "mediaNotes"
+      ) ?? ""
     ).trim();
 
-    let mediaOutputOptions: string[] = [];
+    let mediaOutputOptions:
+      string[] = [];
 
     try {
       const parsed = JSON.parse(
-        String(formData.get("mediaOutputOptions") ?? "[]")
+        String(
+          formData.get(
+            "mediaOutputOptions"
+          ) ?? "[]"
+        )
       );
 
       if (Array.isArray(parsed)) {
         mediaOutputOptions = parsed
           .map(String)
-          .map((item) => item.trim())
+          .map((item) =>
+            item.trim()
+          )
           .filter(Boolean);
       }
     } catch {
       mediaOutputOptions = [];
     }
 
+    const mediaItems =
+      parseMediaItems(
+        formData.get("mediaItems")
+      );
+
+    // Backward compatibility with the old single-media client.
+    if (mediaItems.length === 0) {
+      const legacyMediaPath =
+        String(
+          formData.get(
+            "mediaStoragePath"
+          ) ?? ""
+        ).trim();
+
+      if (legacyMediaPath) {
+        mediaItems.push({
+          path: legacyMediaPath,
+          originalFilename:
+            String(
+              formData.get(
+                "mediaOriginalFilename"
+              ) ?? ""
+            ).trim(),
+          mimeType:
+            String(
+              formData.get(
+                "mediaMimeType"
+              ) ?? ""
+            ).trim(),
+          fileSize:
+            Number(
+              formData.get(
+                "mediaFileSize"
+              ) ?? 0
+            ),
+        });
+      }
+    }
+
     const isMediaService =
-      documentType === "Audio / Video Translation";
+      documentType ===
+      "Audio / Video Translation";
 
     if (
       !isMediaService &&
-      !(file instanceof File)
+      documentFiles.length === 0
     ) {
       return NextResponse.json(
         {
           ok: false,
-          message: "A document file is required.",
+          message:
+            "At least one document file is required.",
         },
         { status: 400 }
       );
@@ -153,14 +290,14 @@ export async function POST(request: Request) {
 
     if (
       isMediaService &&
-      !mediaStoragePath &&
+      mediaItems.length === 0 &&
       !mediaExternalUrl
     ) {
       return NextResponse.json(
         {
           ok: false,
           message:
-            "Please upload an audio/video file or provide a secure file-sharing link.",
+            "Please upload at least one audio/video file or provide a secure file-sharing link.",
         },
         { status: 400 }
       );
@@ -180,49 +317,66 @@ export async function POST(request: Request) {
       );
     }
 
-    if (
-      !isMediaService &&
-      file instanceof File &&
-      !ALLOWED_TYPES.has(file.type)
-    ) {
-      return NextResponse.json(
-        {
-          ok: false,
-          message: "Only PDF, JPG and PNG files are accepted.",
-        },
-        { status: 400 }
-      );
+    for (const file of documentFiles) {
+      if (
+        !ALLOWED_TYPES.has(
+          file.type
+        )
+      ) {
+        return NextResponse.json(
+          {
+            ok: false,
+            message:
+              "Only PDF, JPG and PNG files are accepted.",
+          },
+          { status: 400 }
+        );
+      }
+
+      if (
+        file.size <= 0 ||
+        file.size > MAX_FILE_SIZE
+      ) {
+        return NextResponse.json(
+          {
+            ok: false,
+            message:
+              file.size <= 0
+                ? `The uploaded file \"${file.name}\" is empty.`
+                : `The file \"${file.name}\" exceeds the 15 MB limit.`,
+          },
+          { status: 400 }
+        );
+      }
     }
 
-    if (
-      !isMediaService &&
-      file instanceof File &&
-      (file.size <= 0 || file.size > MAX_FILE_SIZE)
-    ) {
-      return NextResponse.json(
-        {
-          ok: false,
-          message:
-            file.size <= 0
-              ? "The uploaded file is empty."
-              : "The maximum permitted file size is 15 MB.",
-        },
-        { status: 400 }
-      );
+    for (const item of mediaItems) {
+      if (
+        !item.path.startsWith(
+          "pending-media/"
+        )
+      ) {
+        return NextResponse.json(
+          {
+            ok: false,
+            message:
+              "Invalid media storage path.",
+          },
+          { status: 400 }
+        );
+      }
     }
 
     if (!fullName || !email) {
       return NextResponse.json(
-        { ok: false, message: "Full name and email address are required." },
+        {
+          ok: false,
+          message:
+            "Full name and email address are required.",
+        },
         { status: 400 }
       );
     }
-
-    /*
-      Languages and services are managed through
-      Admin Pricing, so validate them against
-      Supabase rather than hard-coded arrays.
-    */
 
     if (
       sourceLanguage !== "Other" &&
@@ -234,7 +388,10 @@ export async function POST(request: Request) {
       } = await supabaseAdmin
         .from("languages")
         .select("id")
-        .eq("name", sourceLanguage)
+        .eq(
+          "name",
+          sourceLanguage
+        )
         .eq("active", true)
         .maybeSingle();
 
@@ -245,13 +402,13 @@ export async function POST(request: Request) {
         return NextResponse.json(
           {
             ok: false,
-            message: "Invalid source language.",
+            message:
+              "Invalid source language.",
           },
           { status: 400 }
         );
       }
     }
-
 
     const {
       data: targetLanguageRecord,
@@ -259,10 +416,12 @@ export async function POST(request: Request) {
     } = await supabaseAdmin
       .from("languages")
       .select("id")
-      .eq("name", targetLanguage)
+      .eq(
+        "name",
+        targetLanguage
+      )
       .eq("active", true)
       .maybeSingle();
-
 
     if (
       targetLanguageError ||
@@ -271,12 +430,12 @@ export async function POST(request: Request) {
       return NextResponse.json(
         {
           ok: false,
-          message: "Invalid target language.",
+          message:
+            "Invalid target language.",
         },
         { status: 400 }
       );
     }
-
 
     const {
       data: serviceRecord,
@@ -287,10 +446,12 @@ export async function POST(request: Request) {
         id,
         manual_review
       `)
-      .eq("name", documentType)
+      .eq(
+        "name",
+        documentType
+      )
       .eq("active", true)
       .maybeSingle();
-
 
     if (
       serviceError ||
@@ -299,47 +460,79 @@ export async function POST(request: Request) {
       return NextResponse.json(
         {
           ok: false,
-          message: "Invalid document type.",
+          message:
+            "Invalid document type.",
         },
         { status: 400 }
       );
     }
 
-
-    if (!allowed(purpose, PURPOSES)) {
-      return NextResponse.json(
-        { ok: false, message: "Invalid translation purpose." },
-        { status: 400 }
-      );
-    }
-
-    if (!allowed(turnaround, TURNAROUNDS)) {
-      return NextResponse.json(
-        { ok: false, message: "Invalid turnaround option." },
-        { status: 400 }
-      );
-    }
-
-    if (sourceLanguage === targetLanguage) {
+    if (
+      !allowed(
+        purpose,
+        PURPOSES
+      )
+    ) {
       return NextResponse.json(
         {
           ok: false,
-          message: "Source and target languages must be different.",
+          message:
+            "Invalid translation purpose.",
         },
         { status: 400 }
       );
     }
 
-    const quote = await calculateServerQuote({
-      sourceLanguage,
-      targetLanguage,
-      documentType,
-      turnaround,
-    });
+    if (
+      !allowed(
+        turnaround,
+        TURNAROUNDS
+      )
+    ) {
+      return NextResponse.json(
+        {
+          ok: false,
+          message:
+            "Invalid turnaround option.",
+        },
+        { status: 400 }
+      );
+    }
+
+    if (
+      sourceLanguage ===
+      targetLanguage
+    ) {
+      return NextResponse.json(
+        {
+          ok: false,
+          message:
+            "Source and target languages must be different.",
+        },
+        { status: 400 }
+      );
+    }
+
+    if (isMediaService) {
+      storagePathsToCleanup.push(
+        ...mediaItems.map(
+          (item) => item.path
+        )
+      );
+    }
+
+    const quote =
+      await calculateServerQuote({
+        sourceLanguage,
+        targetLanguage,
+        documentType,
+        turnaround,
+      });
 
     const requiresManualReview =
       isMediaService ||
-      serviceRecord.manual_review === true ||
+      serviceRecord.manual_review ===
+        true ||
       quote.requiresManualReview;
 
     const expiresAt = new Date(
@@ -349,7 +542,10 @@ export async function POST(request: Request) {
           : 60 * 60 * 1000)
     );
 
-    const { data: enquiry, error: enquiryError } = await supabaseAdmin
+    const {
+      data: enquiry,
+      error: enquiryError,
+    } = await supabaseAdmin
       .from("enquiries")
       .insert({
         status: requiresManualReview
@@ -358,10 +554,14 @@ export async function POST(request: Request) {
         source: "website",
         full_name: fullName,
         email,
-        telephone: telephone || null,
-        source_language: sourceLanguage,
-        target_language: targetLanguage,
-        document_type: documentType,
+        telephone:
+          telephone || null,
+        source_language:
+          sourceLanguage,
+        target_language:
+          targetLanguage,
+        document_type:
+          documentType,
         purpose,
         turnaround,
 
@@ -384,130 +584,162 @@ export async function POST(request: Request) {
 
         requires_manual_review:
           requiresManualReview,
-        indicative_price: quote.amount,
-        expires_at: expiresAt.toISOString(),
+        indicative_price:
+          quote.amount,
+        expires_at:
+          expiresAt.toISOString(),
       })
       .select("id")
       .single();
 
-    if (enquiryError || !enquiry) {
-      console.error("Enquiry creation failed:", enquiryError);
+    if (
+      enquiryError ||
+      !enquiry
+    ) {
+      console.error(
+        "Enquiry creation failed:",
+        enquiryError
+      );
 
-      return NextResponse.json(
-        { ok: false, message: "Unable to create the temporary enquiry." },
-        { status: 500 }
+      throw new Error(
+        "Unable to create the temporary enquiry."
       );
     }
 
     enquiryId = enquiry.id;
 
-    if (
-      !isMediaService &&
-      file instanceof File
-    ) {
-      const extension = getExtension(file.type);
+    if (!isMediaService) {
+      for (const file of documentFiles) {
+        const extension =
+          getExtension(file.type);
 
-      if (!extension) {
-        throw new Error("Unable to determine file extension.");
-      }
+        if (!extension) {
+          throw new Error(
+            "Unable to determine file extension."
+          );
+        }
 
-      storagePath = `${enquiryId}/${randomUUID()}.${extension}`;
+        const storagePath =
+          `${enquiryId}/${randomUUID()}.${extension}`;
 
-      const arrayBuffer = await file.arrayBuffer();
+        const arrayBuffer =
+          await file.arrayBuffer();
 
-      const { error: uploadError } = await supabaseAdmin.storage
-        .from("temporary-enquiries")
-        .upload(storagePath, arrayBuffer, {
-          contentType: file.type,
-          upsert: false,
-        });
+        const {
+          error: uploadError,
+        } = await supabaseAdmin.storage
+          .from(
+            "temporary-enquiries"
+          )
+          .upload(
+            storagePath,
+            arrayBuffer,
+            {
+              contentType:
+                file.type,
+              upsert: false,
+            }
+          );
 
-      if (uploadError) {
-        console.error("Storage upload failed:", uploadError);
-        throw new Error("Unable to store the temporary document.");
-      }
+        if (uploadError) {
+          console.error(
+            "Storage upload failed:",
+            uploadError
+          );
 
-      const { error: documentError } = await supabaseAdmin
-        .from("documents")
-        .insert({
-          enquiry_id: enquiryId,
-          storage_path: storagePath,
-          original_filename: file.name,
-          mime_type: file.type,
-          file_size: file.size,
-          status: "temporary",
-          expires_at: expiresAt.toISOString(),
-        });
+          throw new Error(
+            "Unable to store a temporary document."
+          );
+        }
 
-      if (documentError) {
-        console.error(
-          "Document metadata insert failed:",
-          documentError
+        storagePathsToCleanup.push(
+          storagePath
         );
 
-        throw new Error(
-          "Unable to save document metadata."
-        );
+        const {
+          error: documentError,
+        } = await supabaseAdmin
+          .from("documents")
+          .insert({
+            enquiry_id:
+              enquiryId,
+            storage_path:
+              storagePath,
+            original_filename:
+              file.name,
+            mime_type:
+              file.type,
+            file_size:
+              file.size,
+            status:
+              "temporary",
+            expires_at:
+              expiresAt.toISOString(),
+          });
+
+        if (documentError) {
+          console.error(
+            "Document metadata insert failed:",
+            documentError
+          );
+
+          throw new Error(
+            "Unable to save document metadata."
+          );
+        }
       }
     }
 
-    if (
-      isMediaService &&
-      mediaStoragePath
-    ) {
-      if (
-        !mediaStoragePath.startsWith("pending-media/")
-      ) {
-        throw new Error("Invalid media storage path.");
-      }
+    if (isMediaService) {
+      for (const item of mediaItems) {
+        const {
+          error: mediaDocumentError,
+        } = await supabaseAdmin
+          .from("documents")
+          .insert({
+            enquiry_id:
+              enquiry.id,
+            storage_path:
+              item.path,
+            original_filename:
+              item.originalFilename ||
+              "Audio / Video file",
+            mime_type:
+              item.mimeType ||
+              "application/octet-stream",
+            file_size:
+              Number.isFinite(
+                item.fileSize
+              )
+                ? item.fileSize
+                : null,
+            status:
+              "temporary",
+            expires_at:
+              expiresAt.toISOString(),
+          });
 
-      const { error: mediaDocumentError } = await supabaseAdmin
-        .from("documents")
-        .insert({
-          enquiry_id: enquiry.id,
-          storage_path: mediaStoragePath,
-          original_filename:
-            mediaOriginalFilename || "Audio / Video file",
-          mime_type:
-            mediaMimeType || "application/octet-stream",
-          file_size: Number.isFinite(mediaFileSize)
-            ? mediaFileSize
-            : null,
-          status: "temporary",
-          expires_at: expiresAt.toISOString(),
-        });
+        if (mediaDocumentError) {
+          console.error(
+            "Media document metadata insert failed:",
+            mediaDocumentError
+          );
 
-      if (mediaDocumentError) {
-        console.error(
-          "Media document metadata insert failed:",
-          mediaDocumentError
-        );
-
-        throw new Error(
-          "Unable to save media file metadata."
-        );
+          throw new Error(
+            "Unable to save media file metadata."
+          );
+        }
       }
     }
 
     if (requiresManualReview) {
-      /*
-        Client acknowledgement.
-      */
-
       try {
         await sendEnquiryReceivedEmail({
-          to:
-            email,
-
-          clientName:
-            fullName,
-
+          to: email,
+          clientName: fullName,
           sourceLanguage,
-
           targetLanguage,
-
           documentType,
-
           turnaround,
         });
       } catch (emailError) {
@@ -517,29 +749,15 @@ export async function POST(request: Request) {
         );
       }
 
-
-      /*
-        Internal administration notification.
-      */
-
       try {
         await sendManualReviewEnquiryEmail({
-          clientName:
-            fullName,
-
-          clientEmail:
-            email,
-
+          clientName: fullName,
+          clientEmail: email,
           sourceLanguage,
-
           targetLanguage,
-
           documentType,
-
           purpose,
-
           turnaround,
-
           enquiryId:
             enquiry.id,
         });
@@ -551,35 +769,57 @@ export async function POST(request: Request) {
       }
     }
 
+    // From this point the storage objects belong to the enquiry.
+    storagePathsToCleanup.length = 0;
 
     return NextResponse.json(
       {
         ok: true,
         enquiryId,
         requiresManualReview,
-        amount: quote.amount,
-        currency: quote.currency,
-        expiresAt: expiresAt.toISOString(),
+        amount:
+          quote.amount,
+        currency:
+          quote.currency,
+        expiresAt:
+          expiresAt.toISOString(),
       },
       { status: 201 }
     );
   } catch (error) {
-    console.error("POST /api/enquiries failed:", error);
+    console.error(
+      "POST /api/enquiries failed:",
+      error
+    );
 
-    if (storagePath) {
+    if (
+      storagePathsToCleanup.length > 0
+    ) {
       await supabaseAdmin.storage
-        .from("temporary-enquiries")
-        .remove([storagePath]);
+        .from(
+          "temporary-enquiries"
+        )
+        .remove(
+          Array.from(
+            new Set(
+              storagePathsToCleanup
+            )
+          )
+        );
     }
 
     if (enquiryId) {
-      await supabaseAdmin.from("enquiries").delete().eq("id", enquiryId);
+      await supabaseAdmin
+        .from("enquiries")
+        .delete()
+        .eq("id", enquiryId);
     }
 
     return NextResponse.json(
       {
         ok: false,
-        message: "The temporary enquiry could not be created.",
+        message:
+          "The temporary enquiry could not be created.",
       },
       { status: 500 }
     );
