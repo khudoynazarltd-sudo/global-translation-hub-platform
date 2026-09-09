@@ -15,7 +15,8 @@ export async function googleAdsAccessToken() {
     token_url: "https://sts.googleapis.com/v1/token",
     service_account_impersonation_url:
       "https://iamcredentials.googleapis.com/v1/projects/-/serviceAccounts/gth-ads-conversions@global-translation-hub.iam.gserviceaccount.com:generateAccessToken",
-    subject_token_supplier: { getSubjectToken: getVercelOidcToken },
+    // Do not pass Google supplier context: its audience is not a Vercel token audience.
+    subject_token_supplier: { getSubjectToken: () => getVercelOidcToken() },
   });
   if (!auth) throw new Error("auth_configuration");
   auth.scopes = ["https://www.googleapis.com/auth/datamanager"];
