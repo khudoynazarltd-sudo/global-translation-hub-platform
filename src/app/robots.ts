@@ -19,11 +19,12 @@ export default function robots():
           "/",
 
         disallow: [
-          "/admin/",
-          "/translator/",
-          "/auth/",
+          "/admin",
+          "/translator",
+          "/auth",
           "/api/",
           "/order",
+          "/verify",
           "/payment/",
         ],
       },

@@ -1,3 +1,4 @@
+import { publicMetadata } from "@/lib/seo/metadata";
 import type {
   Metadata,
 } from "next";
@@ -7,18 +8,7 @@ import LegalPageShell, {
 } from "@/components/LegalPageShell";
 
 
-export const metadata: Metadata = {
-  title:
-    "Contact",
-
-  description:
-    "Contact GLOBAL TRANSLATION HUB, operated by KHUDOYNAZAR LTD in Cambridge, United Kingdom.",
-
-  alternates: {
-    canonical:
-      "/contact",
-  },
-};
+export const metadata: Metadata = publicMetadata("Contact", "Contact GLOBAL TRANSLATION HUB, operated by KHUDOYNAZAR LTD in Cambridge, United Kingdom.", "/contact");
 
 export default function ContactPage() {
   return (

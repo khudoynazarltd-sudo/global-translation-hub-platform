@@ -1,3 +1,4 @@
+import { servicePages } from "@/lib/seo/services";
 import type {
   MetadataRoute,
 } from "next";
@@ -10,6 +11,7 @@ export default function sitemap():
 
 
   return [
+    ...servicePages.map(page => ({url: `${baseUrl}/${page.slug}`})),
     {
       url:
         `${baseUrl}/`,

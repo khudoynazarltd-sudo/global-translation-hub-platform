@@ -1,3 +1,4 @@
+import { publicMetadata } from "@/lib/seo/metadata";
 import type {
   Metadata,
 } from "next";
@@ -7,18 +8,7 @@ import LegalPageShell, {
 } from "@/components/LegalPageShell";
 
 
-export const metadata: Metadata = {
-  title:
-    "Privacy Policy",
-
-  description:
-    "Privacy Policy for GLOBAL TRANSLATION HUB, operated by KHUDOYNAZAR LTD.",
-
-  alternates: {
-    canonical:
-      "/privacy",
-  },
-};
+export const metadata: Metadata = publicMetadata("Privacy Policy", "Privacy Policy for GLOBAL TRANSLATION HUB, operated by KHUDOYNAZAR LTD.", "/privacy");
 
 export default function PrivacyPage() {
   return (

@@ -1,3 +1,4 @@
+import { publicMetadata } from "@/lib/seo/metadata";
 import type {
   Metadata,
 } from "next";
@@ -7,18 +8,7 @@ import LegalPageShell, {
 } from "@/components/LegalPageShell";
 
 
-export const metadata: Metadata = {
-  title:
-    "Terms & Conditions",
-
-  description:
-    "Terms and Conditions for GLOBAL TRANSLATION HUB translation services.",
-
-  alternates: {
-    canonical:
-      "/terms",
-  },
-};
+export const metadata: Metadata = publicMetadata("Terms & Conditions", "Terms and Conditions for GLOBAL TRANSLATION HUB translation services.", "/terms");
 
 export default function TermsPage() {
   return (

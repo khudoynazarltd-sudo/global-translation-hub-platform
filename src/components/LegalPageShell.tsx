@@ -16,7 +16,7 @@ export default function LegalPageShell({
     <main className="min-h-screen bg-[#f8faf8] text-[#13201a]">
 
       <header className="border-b border-[#dfe8e2] bg-white">
-        <div className="mx-auto flex max-w-7xl items-center justify-between gap-6 px-6 py-5">
+        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4 px-6 py-5">
 
           <a
             href="/"

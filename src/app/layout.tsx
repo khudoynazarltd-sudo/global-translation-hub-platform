@@ -15,10 +15,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL(
-    process.env.NEXT_PUBLIC_APP_URL ||
-      "https://globaltranslationhub.co.uk"
-  ),
+  metadataBase: new URL("https://globaltranslationhub.co.uk"),
 
   title: {
     default:
@@ -79,12 +76,6 @@ export const metadata: Metadata = {
         url:
           "/branding/gth-logo.png",
 
-        width:
-          1200,
-
-        height:
-          630,
-
         alt:
           "GLOBAL TRANSLATION HUB",
       },
@@ -106,21 +97,6 @@ export const metadata: Metadata = {
     ],
   },
 
-  robots: {
-    index:
-      true,
-
-    follow:
-      true,
-
-    googleBot: {
-      index:
-        true,
-
-      follow:
-        true,
-    },
-  },
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

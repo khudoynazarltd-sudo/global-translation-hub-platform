@@ -1,3 +1,4 @@
+import { publicMetadata } from "@/lib/seo/metadata";
 import type {
   Metadata,
 } from "next";
@@ -7,18 +8,7 @@ import LegalPageShell, {
 } from "@/components/LegalPageShell";
 
 
-export const metadata: Metadata = {
-  title:
-    "Cancellation & Refund Policy",
-
-  description:
-    "Cancellation and Refund Policy for GLOBAL TRANSLATION HUB.",
-
-  alternates: {
-    canonical:
-      "/refunds",
-  },
-};
+export const metadata: Metadata = publicMetadata("Cancellation & Refund Policy", "Cancellation and Refund Policy for GLOBAL TRANSLATION HUB.", "/refunds");
 
 export default function RefundsPage() {
   return (

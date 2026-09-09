@@ -1,3 +1,5 @@
+import { servicePages } from "@/lib/seo/services";
+import { publicMetadata } from "@/lib/seo/metadata";
 import type {
   Metadata,
 } from "next";
@@ -7,17 +9,7 @@ import {
 } from "@/lib/supabase/admin";
 
 
-export const metadata: Metadata = {
-  alternates: {
-    canonical:
-      "/",
-  },
-
-  openGraph: {
-    url:
-      "/",
-  },
-};
+export const metadata: Metadata = publicMetadata("Certified Translation Services UK", "Certified document translation and audio/video translation for UK clients. Russian, Tajik and Chinese to English. Secure upload and clear quotations.", "/");
 
 
 export default async function Home() {
@@ -82,8 +74,9 @@ export default async function Home() {
 
   return (
     <main className="min-h-screen bg-[#f8faf8] text-[#13201a]">
+<script type="application/ld+json" dangerouslySetInnerHTML={{__html: "{\"@context\":\"https://schema.org\",\"@graph\":[{\"@type\":\"Organization\",\"@id\":\"https://globaltranslationhub.co.uk/#organisation\",\"name\":\"GLOBAL TRANSLATION HUB\",\"legalName\":\"KHUDOYNAZAR LTD\",\"url\":\"https://globaltranslationhub.co.uk/\",\"logo\":\"https://globaltranslationhub.co.uk/branding/gth-logo.png\"},{\"@type\":\"WebSite\",\"@id\":\"https://globaltranslationhub.co.uk/#website\",\"name\":\"GLOBAL TRANSLATION HUB\",\"url\":\"https://globaltranslationhub.co.uk/\",\"inLanguage\":\"en-GB\",\"publisher\":{\"@id\":\"https://globaltranslationhub.co.uk/#organisation\"}}]}"}} />
       <header className="border-b border-[#dfe8e2] bg-white">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-5">
+        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4 px-6 py-5">
           <div>
             <div className="text-xl font-bold tracking-wide text-[#087f5b]">
               GLOBAL TRANSLATION HUB
@@ -93,7 +86,7 @@ export default async function Home() {
             </div>
           </div>
 
-          <nav className="hidden items-center gap-7 text-sm font-medium md:flex">
+          <nav aria-label="Main navigation" className="order-3 flex w-full flex-wrap items-center gap-x-6 gap-y-3 text-sm font-medium md:order-none md:w-auto">
             <a href="#services" className="transition hover:text-[#087f5b]">
               Services
             </a>
@@ -162,9 +155,9 @@ export default async function Home() {
           </div>
 
           <div className="rounded-3xl border border-[#dce8e0] bg-white p-8 shadow-sm">
-            <div className="text-sm font-semibold uppercase tracking-[0.18em] text-[#087f5b]">
+            <h2 className="text-sm font-semibold uppercase tracking-[0.18em] text-[#087f5b]">
               How it works
-            </div>
+            </h2>
 
             <div className="mt-7 space-y-6">
               {[
@@ -542,6 +535,8 @@ export default async function Home() {
           </div>
         </div>
       </section>
+
+      <section className="mx-auto max-w-7xl px-6 py-16" aria-labelledby="service-guides"><h2 id="service-guides" className="text-3xl font-bold">Explore our translation services</h2><p className="mt-4 text-[#536259]">Find practical guidance on preparing documents, choosing an output and requesting a quotation.</p><nav aria-label="Translation services" className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{servicePages.map(page => <a key={page.slug} href={"/"+page.slug} className="rounded-xl border border-[#dce8e0] bg-white p-6 font-semibold text-[#087f5b] underline">{page.title}</a>)}</nav></section>
 
       <section id="about" className="mx-auto max-w-7xl px-6 py-24">
         <div className="grid gap-10 lg:grid-cols-2">
