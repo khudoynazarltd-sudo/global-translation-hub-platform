@@ -176,6 +176,23 @@ export default function PrivacyPage() {
       </LegalSection>
 
 
+      <LegalSection title="Advertising measurement">
+        <p>
+          If you accept our optional Google advertising measurement technologies,
+          we use Google Ads to measure enquiries and paid orders arising from ads.
+          For an eligible paid order, we share the Google click identifier, order
+          reference, payment time, amount and currency with Google. This paid-order
+          integration does not send your name, email address, payment-card details
+          or translation documents to Google.
+        </p>
+        <p>
+          We record your advertising consent choice with your enquiry. Paid orders
+          without a Google click identifier or recorded advertising consent are not
+          uploaded through this integration. Contact us if you wish to withdraw
+          consent for an enquiry already submitted.
+        </p>
+      </LegalSection>
+
       <LegalSection title="10. How long we keep information">
         <p>
           We retain information only for as long as
@@ -242,7 +259,7 @@ export default function PrivacyPage() {
 
 
       <p className="border-t border-[#e2ebe5] pt-6 text-sm text-[#718078]">
-        Last updated: 8 September 2026.
+        Last updated: 9 September 2026.
       </p>
 
     </LegalPageShell>

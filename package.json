@@ -6,12 +6,15 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test:google-ads": "node --test tests/google-ads-policy.test.mjs && node tests/google-ads-outbox.cjs"
   },
   "dependencies": {
     "@sparticuz/chromium": "^149.0.0",
     "@supabase/ssr": "^0.12.6",
     "@supabase/supabase-js": "^2.115.0",
+    "@vercel/oidc": "^3.8.6",
+    "google-auth-library": "^11.0.2",
     "next": "16.3.4",
     "pdf-lib": "^1.17.1",
     "puppeteer-core": "^25.10.0",
@@ -22,6 +25,7 @@
     "stripe": "^22.6.1"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "^0.5.8",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/qrcode": "^1.5.6",

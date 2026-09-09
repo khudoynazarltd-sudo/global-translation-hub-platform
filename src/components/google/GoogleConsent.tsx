@@ -152,7 +152,7 @@ export default function GoogleConsent() {
                 We use optional Google advertising
                 measurement technologies to understand
                 whether our advertising leads to
-                enquiries. You can accept or reject
+                enquiries and paid orders. You can accept or reject
                 these optional technologies.
               </p>
 

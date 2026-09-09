@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { recordPaidConversion } from "@/lib/google-ads/outbox";
 import Stripe from "stripe";
 import { stripe } from "@/lib/stripe/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
@@ -86,6 +87,7 @@ export async function POST(request: Request) {
       }
 
       if (existingOrder) {
+        await recordPaidConversion(existingOrder, enquiryId, session, event);
         return NextResponse.json({
           ok: true,
           orderReference: existingOrder.order_reference,
@@ -173,6 +175,8 @@ export async function POST(request: Request) {
     if (orderError || !order) {
       throw new Error("Unable to create order.");
     }
+
+    await recordPaidConversion(order, enquiryId, session, event);
 
     const { error: enquiryUpdateError } =
       await supabaseAdmin

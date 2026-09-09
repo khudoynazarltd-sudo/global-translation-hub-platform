@@ -978,6 +978,115 @@ export default function QuotePage() {
         );
       }
 
+
+      /*
+        Attach first-touch marketing attribution
+        to the enquiry.
+
+        These values are collected by
+        AnalyticsTracker and remain associated
+        with the current browser-tab session.
+      */
+
+      const attributionSessionId =
+        window.sessionStorage.getItem(
+          "gth_analytics_session_id"
+        );
+
+      if (attributionSessionId) {
+        formData.append(
+          "attributionSessionId",
+          attributionSessionId
+        );
+      }
+
+
+      const storedAttribution =
+        window.sessionStorage.getItem(
+          "gth_analytics_first_touch"
+        );
+
+      if (storedAttribution) {
+        try {
+          const attribution =
+            JSON.parse(
+              storedAttribution
+            ) as Record<
+              string,
+              unknown
+            >;
+
+          const appendAttribution = (
+            formKey: string,
+            value: unknown
+          ) => {
+            if (
+              typeof value === "string" &&
+              value.trim() !== ""
+            ) {
+              formData.append(
+                formKey,
+                value.trim()
+              );
+            }
+          };
+
+          appendAttribution(
+            "utmSource",
+            attribution.utmSource
+          );
+
+          appendAttribution(
+            "utmMedium",
+            attribution.utmMedium
+          );
+
+          appendAttribution(
+            "utmCampaign",
+            attribution.utmCampaign
+          );
+
+          appendAttribution(
+            "utmTerm",
+            attribution.utmTerm
+          );
+
+          appendAttribution(
+            "utmContent",
+            attribution.utmContent
+          );
+
+          appendAttribution(
+            "gclid",
+            attribution.gclid
+          );
+
+          appendAttribution(
+            "fbclid",
+            attribution.fbclid
+          );
+
+          appendAttribution(
+            "msclkid",
+            attribution.msclkid
+          );
+
+        } catch {
+          /*
+            Attribution must never prevent
+            submission of a customer enquiry.
+          */
+        }
+      }
+
+
+      try {
+        const adsConsent = window.localStorage.getItem("gth-google-consent");
+        if (adsConsent === "accepted" || adsConsent === "rejected") {
+          formData.append("googleAdsConsent", adsConsent);
+        }
+      } catch { /* Missing browser storage means no advertising consent. */ }
+
       const response = await fetch(
         "/api/enquiries",
         {

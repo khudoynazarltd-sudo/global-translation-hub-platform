@@ -281,6 +281,93 @@ export async function POST(
       ) ?? ""
     ).trim();
 
+
+    const consentValue = formData.get("googleAdsConsent");
+    const googleAdsConsent = consentValue === "accepted" || consentValue === "rejected"
+      ? consentValue : null;
+
+    const attributionSessionId =
+      String(
+        formData.get(
+          "attributionSessionId"
+        ) ?? ""
+      )
+        .trim()
+        .slice(0, 200);
+
+    const utmSource =
+      String(
+        formData.get(
+          "utmSource"
+        ) ?? ""
+      )
+        .trim()
+        .slice(0, 500);
+
+    const utmMedium =
+      String(
+        formData.get(
+          "utmMedium"
+        ) ?? ""
+      )
+        .trim()
+        .slice(0, 500);
+
+    const utmCampaign =
+      String(
+        formData.get(
+          "utmCampaign"
+        ) ?? ""
+      )
+        .trim()
+        .slice(0, 500);
+
+    const utmTerm =
+      String(
+        formData.get(
+          "utmTerm"
+        ) ?? ""
+      )
+        .trim()
+        .slice(0, 500);
+
+    const utmContent =
+      String(
+        formData.get(
+          "utmContent"
+        ) ?? ""
+      )
+        .trim()
+        .slice(0, 500);
+
+    const gclid =
+      String(
+        formData.get(
+          "gclid"
+        ) ?? ""
+      )
+        .trim()
+        .slice(0, 1000);
+
+    const fbclid =
+      String(
+        formData.get(
+          "fbclid"
+        ) ?? ""
+      )
+        .trim()
+        .slice(0, 1000);
+
+    const msclkid =
+      String(
+        formData.get(
+          "msclkid"
+        ) ?? ""
+      )
+        .trim()
+        .slice(0, 1000);
+
+
     const mediaExternalUrl =
       String(
         formData.get(
@@ -652,6 +739,45 @@ export async function POST(
           documentType,
         purpose,
         turnaround,
+
+        google_ads_consent: googleAdsConsent,
+        google_ads_consent_recorded_at: googleAdsConsent ? new Date().toISOString() : null,
+
+        attribution_session_id:
+          attributionSessionId ||
+          null,
+
+        utm_source:
+          utmSource ||
+          null,
+
+        utm_medium:
+          utmMedium ||
+          null,
+
+        utm_campaign:
+          utmCampaign ||
+          null,
+
+        utm_term:
+          utmTerm ||
+          null,
+
+        utm_content:
+          utmContent ||
+          null,
+
+        gclid:
+          gclid ||
+          null,
+
+        fbclid:
+          fbclid ||
+          null,
+
+        msclkid:
+          msclkid ||
+          null,
 
         media_external_url:
           isMediaService &&
