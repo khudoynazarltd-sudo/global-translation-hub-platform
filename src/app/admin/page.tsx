@@ -777,6 +777,15 @@ export default async function AdminDashboardPage() {
 
 
           <a
+            href="/admin/google-ads"
+            className="rounded-2xl border border-[#dce6df] bg-white p-7 shadow-sm transition hover:border-[#9db9a8]"
+          >
+            <div className="text-xl font-bold">Google Ads paid orders</div>
+            <p className="mt-3 text-[#607067]">
+              Check Google connection and paid-order conversion status.
+            </p>
+          </a>
+          <a
             href="/admin/pricing"
             className="rounded-2xl border border-[#dce6df] bg-white p-7 shadow-sm transition hover:border-[#9db9a8]"
           >
