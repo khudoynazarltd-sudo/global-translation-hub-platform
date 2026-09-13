@@ -12,7 +12,16 @@ import {
 export const metadata: Metadata = publicMetadata("Certified Translation Services UK", "Certified document translation and audio/video translation for UK clients. Russian, Tajik and Chinese to English. Secure upload and clear quotations.", "/");
 
 
-export default async function Home() {
+export default async function Home({
+  searchParams,
+}: {
+  searchParams: Promise<{
+    pricingPair?: string;
+  }>;
+}) {
+  const params =
+    await searchParams;
+
   const {
     data: services,
   } =
@@ -37,39 +46,221 @@ export default async function Home() {
       );
 
 
-  const serviceMap =
+  const {
+    data: languages,
+  } =
+    await supabaseAdmin
+      .from("languages")
+      .select(`
+        id,
+        code,
+        name,
+        active,
+        sort_order
+      `)
+      .eq(
+        "active",
+        true
+      )
+      .order(
+        "sort_order",
+        {
+          ascending: true,
+        }
+      );
+
+
+  const {
+    data: pairPrices,
+  } =
+    await supabaseAdmin
+      .from(
+        "language_pair_prices"
+      )
+      .select(`
+        id,
+        source_language_id,
+        target_language_id,
+        base_price,
+        active
+      `)
+      .eq(
+        "active",
+        true
+      )
+      .order(
+        "created_at",
+        {
+          ascending: true,
+        }
+      );
+
+
+  const {
+    data: languagePrices,
+  } =
+    await supabaseAdmin
+      .from(
+        "service_language_prices"
+      )
+      .select(`
+        id,
+        service_id,
+        source_language_id,
+        target_language_id,
+        price,
+        manual_review,
+        active
+      `)
+      .eq(
+        "active",
+        true
+      )
+      .order(
+        "created_at",
+        {
+          ascending: false,
+        }
+      );
+
+
+  const languageMap =
     new Map(
-      (services ?? []).map(
-        (service) => [
-          service.name,
-          service,
+      (languages ?? []).map(
+        (language) => [
+          language.id,
+          language,
         ]
       )
     );
 
 
+  const availablePairs =
+    (pairPrices ?? []).filter(
+      (pair) =>
+        languageMap.has(
+          pair.source_language_id
+        ) &&
+        languageMap.has(
+          pair.target_language_id
+        ) &&
+        pair.source_language_id !==
+          pair.target_language_id &&
+        (languagePrices ?? []).some(
+          (price) =>
+            price.source_language_id ===
+              pair.source_language_id &&
+            price.target_language_id ===
+              pair.target_language_id &&
+            !price.manual_review &&
+            Number.isFinite(
+              Number(
+                price.price
+              )
+            ) &&
+            Number(
+              price.price
+            ) > 0 &&
+            (services ?? []).some(
+              (service) =>
+                service.id ===
+                  price.service_id &&
+                !service.manual_review
+            )
+        )
+    );
+
+
+  const defaultPair =
+    availablePairs.find(
+      (pair) =>
+        languageMap.get(
+          pair.source_language_id
+        )?.name === "Russian" &&
+        languageMap.get(
+          pair.target_language_id
+        )?.name === "English"
+    ) ??
+    availablePairs[0] ??
+    null;
+
+
+  const selectedPair =
+    availablePairs.find(
+      (pair) =>
+        pair.id ===
+        params.pricingPair
+    ) ??
+    defaultPair;
+
+
   function servicePrice(
-    serviceName: string
+    service: NonNullable<
+      typeof services
+    >[number]
   ) {
-    const service =
-      serviceMap.get(
-        serviceName
+
+
+    if (
+      !selectedPair ||
+      service.manual_review
+    ) {
+      return null;
+    }
+
+
+    const override =
+      (languagePrices ?? []).find(
+        (price) =>
+          price.service_id ===
+            service.id &&
+          price.source_language_id ===
+            selectedPair.source_language_id &&
+          price.target_language_id ===
+            selectedPair.target_language_id
       );
 
 
     if (
-      !service ||
-      service.manual_review ||
-      service.base_price === null
+      override?.manual_review
     ) {
-      return "Individual quotation";
+      return null;
     }
 
 
-    return `from £${Number(
-      service.base_price
-    ).toFixed(0)}`;
+    const amount =
+      override
+        ? Number(
+            override.price
+          )
+        : Number(
+            service.base_price
+          );
+
+
+    if (
+      !Number.isFinite(
+        amount
+      ) ||
+      amount <= 0
+    ) {
+      return null;
+    }
+
+
+    return `from £${amount.toFixed(
+      0
+    )}`;
   }
+
+
+  const visibleServices =
+    (services ?? []).filter(
+      (service) =>
+        servicePrice(
+          service
+        ) !== null
+    );
 
 
   return (
@@ -426,67 +617,82 @@ export default async function Home() {
 
           </div>
 
-          <div className="overflow-hidden rounded-2xl border border-[#dfe8e2] bg-white">
-            {[
-              [
-                "Birth Certificate",
-                servicePrice(
-                  "Birth Certificate"
-                ),
-              ],
+          <div>
+            <div className="mb-5 flex flex-wrap gap-2">
+              {availablePairs.map(
+                (pair) => {
+                  const source =
+                    languageMap.get(
+                      pair.source_language_id
+                    );
 
-              [
-                "Marriage Certificate",
-                servicePrice(
-                  "Marriage Certificate"
-                ),
-              ],
+                  const target =
+                    languageMap.get(
+                      pair.target_language_id
+                    );
 
-              [
-                "Police Certificate",
-                servicePrice(
-                  "Police Certificate"
-                ),
-              ],
+                  const selected =
+                    selectedPair?.id ===
+                    pair.id;
 
-              [
-                "Passport",
-                servicePrice(
-                  "Passport"
-                ),
-              ],
 
-              [
-                "Diploma",
-                servicePrice(
-                  "Diploma"
-                ),
-              ],
+                  return (
+                    <a
+                      key={pair.id}
+                      href={`/?pricingPair=${encodeURIComponent(
+                        pair.id
+                      )}#pricing`}
+                      className={`rounded-full border px-4 py-2 text-sm font-semibold transition ${
+                        selected
+                          ? "border-[#087f5b] bg-[#087f5b] text-white"
+                          : "border-[#b9d8c7] bg-white text-[#315244] hover:border-[#087f5b]"
+                      }`}
+                    >
+                      {source?.name} →{" "}
+                      {target?.name}
+                    </a>
+                  );
+                }
+              )}
+            </div>
 
-              [
-                "Summons",
-                servicePrice(
-                  "Summons"
-                ),
-              ],
+            <div className="overflow-hidden rounded-2xl border border-[#dfe8e2] bg-white">
+              {visibleServices.map(
+                (
+                  service,
+                  index
+                ) => (
+                  <div
+                    key={service.id}
+                    className={`flex items-center justify-between gap-5 px-6 py-5 ${
+                      index !==
+                      (services ?? [])
+                        .length -
+                        1
+                        ? "border-b border-[#edf1ee]"
+                        : ""
+                    }`}
+                  >
+                    <span>
+                      {service.name}
+                    </span>
 
-              [
-                "Legal / complex document",
-                "Individual quotation",
-              ],
-            ].map(([service, price], index) => (
-              <div
-                key={service}
-                className={`flex items-center justify-between gap-5 px-6 py-5 ${
-                  index !== 6
-                    ? "border-b border-[#edf1ee]"
-                    : ""
-                }`}
-              >
-                <span>{service}</span>
-                <strong className="text-right text-[#087f5b]">{price}</strong>
-              </div>
-            ))}
+                    <strong className="text-right text-[#087f5b]">
+                      {servicePrice(
+                        service
+                      )}
+                    </strong>
+                  </div>
+                )
+              )}
+
+              {visibleServices.length ===
+                0 && (
+                <div className="px-6 py-5 text-sm text-[#607067]">
+                  No standard prices are currently configured for this language pair.
+                </div>
+              )}
+            </div>
           </div>
         </div>
 

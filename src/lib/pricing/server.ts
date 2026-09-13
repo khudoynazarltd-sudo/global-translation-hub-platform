@@ -10,45 +10,6 @@ export type ServerQuoteCalculation = {
 };
 
 
-const DOCUMENT_TYPE_CODES: Record<
-  string,
-  string
-> = {
-  "Birth Certificate":
-    "birth_certificate",
-
-  "Marriage Certificate":
-    "marriage_certificate",
-
-  "Police Certificate":
-    "police_certificate",
-
-  "Passport / ID":
-    "passport",
-
-  "Diploma / Academic Certificate":
-    "diploma",
-
-  "Academic Transcript":
-    "academic_transcript",
-
-  "Legal Document":
-    "legal_document",
-
-  "Court Document":
-    "court_document",
-
-  "Medical Document":
-    "medical_document",
-
-  "Business Document":
-    "business_document",
-
-  "Other":
-    "other",
-};
-
-
 function money(
   amount: number
 ) {
@@ -94,26 +55,6 @@ export async function calculateServerQuote({
   }
 
 
-  const serviceCode =
-    DOCUMENT_TYPE_CODES[
-      documentType
-    ];
-
-
-  if (!serviceCode) {
-    return {
-      requiresManualReview:
-        true,
-
-      amount:
-        null,
-
-      currency:
-        "GBP",
-    };
-  }
-
-
   /*
     Load service.
   */
@@ -127,12 +68,13 @@ export async function calculateServerQuote({
       .select(`
         id,
         code,
+        base_price,
         manual_review,
         active
       `)
       .eq(
-        "code",
-        serviceCode
+        "name",
+        documentType
       )
       .eq(
         "active",
@@ -294,74 +236,21 @@ export async function calculateServerQuote({
 
 
   if (
+    overrideError ||
     override?.manual_review
   ) {
     return manualReview();
   }
 
 
-  let basePrice:
-    number | null =
+  const basePrice =
     override
       ? Number(
           override.price
         )
-      : null;
-
-
-  /*
-    No override:
-    use language-pair base price.
-  */
-
-  if (
-    basePrice === null
-  ) {
-    const {
-      data: pairPrice,
-      error: pairPriceError,
-    } =
-      await supabaseAdmin
-        .from(
-          "language_pair_prices"
-        )
-        .select(`
-          base_price,
-          active
-        `)
-        .eq(
-          "source_language_id",
-          source.id
-        )
-        .eq(
-          "target_language_id",
-          target.id
-        )
-        .eq(
-          "active",
-          true
-        )
-        .maybeSingle();
-
-
-    if (
-      pairPriceError ||
-      !pairPrice
-    ) {
-      console.error(
-        "Language pair price lookup failed:",
-        pairPriceError
-      );
-
-      return manualReview();
-    }
-
-
-    basePrice =
-      Number(
-        pairPrice.base_price
-      );
-  }
+      : Number(
+          service.base_price
+        );
 
 
   if (

@@ -85,6 +85,205 @@ export async function POST(
   }
 
 
+  if (
+    action ===
+    "move_service"
+  ) {
+    const id =
+      String(
+        body.id ?? ""
+      ).trim();
+
+    const direction =
+      String(
+        body.direction ?? ""
+      );
+
+
+    if (
+      !id ||
+      ![
+        "up",
+        "down",
+      ].includes(
+        direction
+      )
+    ) {
+      return errorResponse(
+        "Invalid service move request."
+      );
+    }
+
+
+    const {
+      data: serviceRows,
+      error: servicesError,
+    } =
+      await supabaseAdmin
+        .from("service_types")
+        .select(`
+          id,
+          sort_order
+        `)
+        .order(
+          "sort_order",
+          {
+            ascending:
+              true,
+          }
+        )
+        .order(
+          "id",
+          {
+            ascending:
+              true,
+          }
+        );
+
+
+    if (
+      servicesError ||
+      !serviceRows
+    ) {
+      console.error(
+        "Unable to load services for reordering:",
+        servicesError
+      );
+
+      return errorResponse(
+        "Unable to reorder services.",
+        500
+      );
+    }
+
+
+    const currentIndex =
+      serviceRows.findIndex(
+        (service) =>
+          service.id === id
+      );
+
+
+    if (
+      currentIndex < 0
+    ) {
+      return errorResponse(
+        "Service not found."
+      );
+    }
+
+
+    const targetIndex =
+      direction === "up"
+        ? currentIndex - 1
+        : currentIndex + 1;
+
+
+    if (
+      targetIndex < 0 ||
+      targetIndex >=
+        serviceRows.length
+    ) {
+      return ok(
+        "Service is already at the edge of the list."
+      );
+    }
+
+
+    const currentService =
+      serviceRows[
+        currentIndex
+      ];
+
+    const targetService =
+      serviceRows[
+        targetIndex
+      ];
+
+
+    const currentSortOrder =
+      Number(
+        currentService.sort_order
+      );
+
+    const targetSortOrder =
+      Number(
+        targetService.sort_order
+      );
+
+
+    const {
+      error:
+        currentUpdateError,
+    } =
+      await supabaseAdmin
+        .from("service_types")
+        .update({
+          sort_order:
+            targetSortOrder,
+          updated_at:
+            new Date().toISOString(),
+        })
+        .eq(
+          "id",
+          currentService.id
+        );
+
+
+    if (
+      currentUpdateError
+    ) {
+      console.error(
+        "Unable to move service:",
+        currentUpdateError
+      );
+
+      return errorResponse(
+        "Unable to reorder services.",
+        500
+      );
+    }
+
+
+    const {
+      error:
+        targetUpdateError,
+    } =
+      await supabaseAdmin
+        .from("service_types")
+        .update({
+          sort_order:
+            currentSortOrder,
+          updated_at:
+            new Date().toISOString(),
+        })
+        .eq(
+          "id",
+          targetService.id
+        );
+
+
+    if (
+      targetUpdateError
+    ) {
+      console.error(
+        "Unable to move adjacent service:",
+        targetUpdateError
+      );
+
+      return errorResponse(
+        "Unable to reorder services.",
+        500
+      );
+    }
+
+
+    return ok(
+      "Service order updated."
+    );
+  }
+
+
 
   if (
     action ===

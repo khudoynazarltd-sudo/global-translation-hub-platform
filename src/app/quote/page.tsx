@@ -59,23 +59,6 @@ const purposes = [
 
 const turnaroundOptions = ["Standard", "Priority", "Urgent"];
 
-const priceGuideLanguages = [
-  "Russian",
-  "Tajik",
-  "Chinese",
-] as const;
-
-const priceGuideDocumentTypes = [
-  "Birth Certificate",
-  "Marriage Certificate",
-  "Police Certificate",
-  "Passport / ID",
-  "Diploma / Academic Certificate",
-] as const;
-
-type PriceGuideLanguage =
-  (typeof priceGuideLanguages)[number];
-
 type PriceGuideItem = {
   documentType: string;
   requiresManualReview: boolean;
@@ -391,7 +374,7 @@ export default function QuotePage() {
     priceGuideLanguage,
     setPriceGuideLanguage,
   ] =
-    useState<PriceGuideLanguage>(
+    useState(
       "Russian"
     );
 
@@ -549,21 +532,31 @@ export default function QuotePage() {
     };
   }, []);
 
-  useEffect(() => {
-    const controller =
-      new AbortController();
+useEffect(() => {
+if (!pricingOptions) {
+return;
+}
 
-    async function loadPriceGuide() {
+const priceGuideServices =
+  pricingOptions.services;
+
+const controller =
+  new AbortController();
+
+async function loadPriceGuide() {
       setPriceGuideLoading(true);
       setPriceGuideError("");
 
       try {
-        const results =
-          await Promise.all(
-            priceGuideDocumentTypes.map(
-              async (
-                currentDocumentType
-              ) => {
+    const results =
+      await Promise.all(
+        priceGuideServices.map(
+          async (
+            service
+          ) => {
+                const currentDocumentType =
+                  service.name;
+
                 const response =
                   await fetch(
                     "/api/pricing/quote",
@@ -630,7 +623,11 @@ export default function QuotePage() {
           );
 
         setPriceGuide(
-          results
+          results.filter(
+            (item) =>
+              !item.requiresManualReview &&
+              item.amount != null
+          )
         );
 
       } catch (error) {
@@ -668,6 +665,7 @@ export default function QuotePage() {
     };
   }, [
     priceGuideLanguage,
+    pricingOptions,
   ]);
 
   useEffect(() => {
@@ -1434,7 +1432,20 @@ export default function QuotePage() {
                 </p>
 
                 <div className="mt-5 flex flex-wrap gap-2">
-                  {priceGuideLanguages.map(
+                  {(pricingOptions?.languages
+                    .map(
+                      (language) =>
+                        language.name
+                    )
+                    .filter(
+                      (language) =>
+                        language !==
+                        "English"
+                    ) ?? [
+                      "Russian",
+                      "Tajik",
+                      "Chinese",
+                    ]).map(
                     (language) => (
                       <button
                         key={language}
@@ -1472,6 +1483,11 @@ export default function QuotePage() {
                     <div className="px-5 py-6 text-sm font-medium text-[#9a3f2f]">
                       {priceGuideError}
                     </div>
+                  ) : priceGuide.length ===
+                    0 ? (
+                    <div className="px-5 py-6 text-sm font-medium text-[#607067]">
+                      No standard prices are currently configured for this language pair.
+                    </div>
                   ) : (
                     priceGuide.map(
                       (
@@ -1497,12 +1513,11 @@ export default function QuotePage() {
                           </span>
 
                           <strong className="text-right text-[#087f5b]">
-                            {item.requiresManualReview ||
-                            item.amount == null
-                              ? "Individual quotation"
-                              : formatPrice(
+                            {item.amount != null
+                              ? formatPrice(
                                   item.amount
-                                )}
+                                )
+                              : ""}
                           </strong>
                         </div>
                       )
