@@ -32,14 +32,15 @@ export default async function Home({
         name,
         base_price,
         manual_review,
-        active
+        active,
+        sort_order
       `)
       .eq(
         "active",
         true
       )
       .order(
-        "name",
+        "sort_order",
         {
           ascending: true,
         }
@@ -248,8 +249,8 @@ export default async function Home({
     }
 
 
-    return `from £${amount.toFixed(
-      0
+    return `£${amount.toFixed(
+      2
     )}`;
   }
 
