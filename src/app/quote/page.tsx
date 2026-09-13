@@ -59,6 +59,29 @@ const purposes = [
 
 const turnaroundOptions = ["Standard", "Priority", "Urgent"];
 
+const priceGuideLanguages = [
+  "Russian",
+  "Tajik",
+  "Chinese",
+] as const;
+
+const priceGuideDocumentTypes = [
+  "Birth Certificate",
+  "Marriage Certificate",
+  "Police Certificate",
+  "Passport / ID",
+  "Diploma / Academic Certificate",
+] as const;
+
+type PriceGuideLanguage =
+  (typeof priceGuideLanguages)[number];
+
+type PriceGuideItem = {
+  documentType: string;
+  requiresManualReview: boolean;
+  amount: number | null;
+};
+
 type SubmissionResult = {
   ok: boolean;
   enquiryId?: string;
@@ -364,6 +387,34 @@ export default function QuotePage() {
       currency: "GBP",
     });
 
+  const [
+    priceGuideLanguage,
+    setPriceGuideLanguage,
+  ] =
+    useState<PriceGuideLanguage>(
+      "Russian"
+    );
+
+  const [
+    priceGuide,
+    setPriceGuide,
+  ] =
+    useState<PriceGuideItem[]>(
+      []
+    );
+
+  const [
+    priceGuideLoading,
+    setPriceGuideLoading,
+  ] =
+    useState(true);
+
+  const [
+    priceGuideError,
+    setPriceGuideError,
+  ] =
+    useState("");
+
   useEffect(() => {
     const searchParams =
       new URLSearchParams(
@@ -497,6 +548,127 @@ export default function QuotePage() {
       active = false;
     };
   }, []);
+
+  useEffect(() => {
+    const controller =
+      new AbortController();
+
+    async function loadPriceGuide() {
+      setPriceGuideLoading(true);
+      setPriceGuideError("");
+
+      try {
+        const results =
+          await Promise.all(
+            priceGuideDocumentTypes.map(
+              async (
+                currentDocumentType
+              ) => {
+                const response =
+                  await fetch(
+                    "/api/pricing/quote",
+                    {
+                      method:
+                        "POST",
+
+                      headers: {
+                        "Content-Type":
+                          "application/json",
+                      },
+
+                      body:
+                        JSON.stringify({
+                          sourceLanguage:
+                            priceGuideLanguage,
+                          targetLanguage:
+                            "English",
+                          documentType:
+                            currentDocumentType,
+                          turnaround:
+                            "Standard",
+                        }),
+
+                      signal:
+                        controller.signal,
+
+                      cache:
+                        "no-store",
+                    }
+                  );
+
+                const data =
+                  await response.json();
+
+                if (
+                  !response.ok ||
+                  !data.ok
+                ) {
+                  throw new Error(
+                    data.message ||
+                      "Unable to load indicative prices."
+                  );
+                }
+
+                return {
+                  documentType:
+                    currentDocumentType,
+
+                  requiresManualReview:
+                    Boolean(
+                      data.requiresManualReview
+                    ),
+
+                  amount:
+                    data.amount != null
+                      ? Number(
+                          data.amount
+                        )
+                      : null,
+                };
+              }
+            )
+          );
+
+        setPriceGuide(
+          results
+        );
+
+      } catch (error) {
+        if (
+          error instanceof DOMException &&
+          error.name ===
+            "AbortError"
+        ) {
+          return;
+        }
+
+        setPriceGuide([]);
+
+        setPriceGuideError(
+          error instanceof Error
+            ? error.message
+            : "Unable to load indicative prices."
+        );
+
+      } finally {
+        if (
+          !controller.signal.aborted
+        ) {
+          setPriceGuideLoading(
+            false
+          );
+        }
+      }
+    }
+
+    loadPriceGuide();
+
+    return () => {
+      controller.abort();
+    };
+  }, [
+    priceGuideLanguage,
+  ]);
 
   useEffect(() => {
     if (
@@ -1247,8 +1419,105 @@ export default function QuotePage() {
                 video translation enquiry.
               </p>
 
+              <div className="mt-8 rounded-2xl border border-[#b9d8c7] bg-[#f1f8f4] p-6">
+                <div className="text-sm font-semibold uppercase tracking-[0.14em] text-[#087f5b]">
+                  Indicative Standard Prices
+                </div>
 
-              <div className="mt-8 rounded-2xl border border-[#dce6df] bg-white p-6">
+                <h3 className="mt-2 text-xl font-bold">
+                  Check the price before uploading
+                </h3>
+
+                <p className="mt-2 leading-7 text-[#607067]">
+                  Choose a language pair to view indicative prices for common
+                  documents with Standard turnaround.
+                </p>
+
+                <div className="mt-5 flex flex-wrap gap-2">
+                  {priceGuideLanguages.map(
+                    (language) => (
+                      <button
+                        key={language}
+                        type="button"
+                        onClick={() => {
+                          setPriceGuideLanguage(
+                            language
+                          );
+                          setSourceLanguage(
+                            language
+                          );
+                          setTargetLanguage(
+                            "English"
+                          );
+                        }}
+                        className={`rounded-full border px-4 py-2 text-sm font-semibold transition ${
+                          priceGuideLanguage ===
+                          language
+                            ? "border-[#087f5b] bg-[#087f5b] text-white"
+                            : "border-[#b9d8c7] bg-white text-[#315244] hover:border-[#087f5b]"
+                        }`}
+                      >
+                        {language} → English
+                      </button>
+                    )
+                  )}
+                </div>
+
+                <div className="mt-6 overflow-hidden rounded-xl border border-[#dce6df] bg-white">
+                  {priceGuideLoading ? (
+                    <div className="px-5 py-6 text-sm font-medium text-[#607067]">
+                      Loading prices...
+                    </div>
+                  ) : priceGuideError ? (
+                    <div className="px-5 py-6 text-sm font-medium text-[#9a3f2f]">
+                      {priceGuideError}
+                    </div>
+                  ) : (
+                    priceGuide.map(
+                      (
+                        item,
+                        index
+                      ) => (
+                        <div
+                          key={
+                            item.documentType
+                          }
+                          className={`flex items-center justify-between gap-5 px-5 py-4 ${
+                            index !==
+                            priceGuide.length -
+                              1
+                              ? "border-b border-[#edf1ee]"
+                              : ""
+                          }`}
+                        >
+                          <span className="font-medium">
+                            {
+                              item.documentType
+                            }
+                          </span>
+
+                          <strong className="text-right text-[#087f5b]">
+                            {item.requiresManualReview ||
+                            item.amount == null
+                              ? "Individual quotation"
+                              : formatPrice(
+                                  item.amount
+                                )}
+                          </strong>
+                        </div>
+                      )
+                    )
+                  )}
+                </div>
+
+                <p className="mt-4 text-sm leading-6 text-[#65736b]">
+                  Indicative prices are based on one standard document and
+                  Standard turnaround. Final pricing may vary depending on
+                  document complexity, length and service requirements.
+                </p>
+              </div>
+
+              <div className="mt-6 rounded-2xl border border-[#dce6df] bg-white p-6">
                 <div className="text-sm font-semibold uppercase tracking-[0.14em] text-[#087f5b]">
                   Document Translation
                 </div>
