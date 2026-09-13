@@ -358,6 +358,19 @@ export default function QuotePage() {
   ] =
     useState("");
 
+  const availableDocumentTypes =
+    Array.from(
+      new Set([
+        ...(
+          pricingOptions?.services.map(
+            (service) =>
+              service.name
+          ) ?? []
+        ),
+        ...documentTypes,
+      ])
+    );
+
 
   const [
     quotePreview,
@@ -457,6 +470,154 @@ export default function QuotePage() {
       );
     }
   }, []);
+
+  useEffect(() => {
+    const sessionIdKey =
+      "gth_analytics_session_id";
+
+    let sessionId =
+      window.sessionStorage.getItem(
+        sessionIdKey
+      );
+
+    if (!sessionId) {
+      sessionId =
+        crypto.randomUUID();
+
+      window.sessionStorage.setItem(
+        sessionIdKey,
+        sessionId
+      );
+    }
+
+    const trackedStepKey =
+      `gth_quote_funnel_${step}`;
+
+    if (
+      window.sessionStorage.getItem(
+        trackedStepKey
+      ) === "1"
+    ) {
+      return;
+    }
+
+    let attribution:
+      Record<string, unknown> =
+      {};
+
+    const storedAttribution =
+      window.sessionStorage.getItem(
+        "gth_analytics_first_touch"
+      );
+
+    if (storedAttribution) {
+      try {
+        attribution =
+          JSON.parse(
+            storedAttribution
+          ) as Record<
+            string,
+            unknown
+          >;
+      } catch {
+        attribution = {};
+      }
+    }
+
+    const value = (
+      key: string
+    ) =>
+      typeof attribution[
+        key
+      ] === "string"
+        ? attribution[
+            key
+          ]
+        : null;
+
+    void fetch(
+      "/api/analytics/visit",
+      {
+        method:
+          "POST",
+
+        headers: {
+          "Content-Type":
+            "application/json",
+        },
+
+        body:
+          JSON.stringify({
+            sessionId,
+
+            path:
+              `/quote-funnel/${step}`,
+
+            referrer:
+              document.referrer ||
+              null,
+
+            utmSource:
+              value(
+                "utmSource"
+              ),
+
+            utmMedium:
+              value(
+                "utmMedium"
+              ),
+
+            utmCampaign:
+              value(
+                "utmCampaign"
+              ),
+
+            utmTerm:
+              value(
+                "utmTerm"
+              ),
+
+            utmContent:
+              value(
+                "utmContent"
+              ),
+
+            gclid:
+              value(
+                "gclid"
+              ),
+
+            fbclid:
+              value(
+                "fbclid"
+              ),
+
+            msclkid:
+              value(
+                "msclkid"
+              ),
+          }),
+      }
+    )
+      .then(
+        (response) => {
+          if (
+            response.ok
+          ) {
+            window.sessionStorage.setItem(
+              trackedStepKey,
+              "1"
+            );
+          }
+        }
+      )
+      .catch(() => {
+        /*
+          Analytics must never interrupt
+          the quotation workflow.
+        */
+      });
+  }, [step]);
 
   const sourceAndTargetAreSame =
     sourceLanguage !== "" &&
@@ -1679,11 +1840,7 @@ async function loadPriceGuide() {
                                 Optional
                               </option>
 
-                              {(
-                                pricingOptions?.services.map(
-                                  (service) => service.name
-                                ) ?? documentTypes
-                              )
+                              {availableDocumentTypes
                                 .filter(
                                   (name) =>
                                     name !==
@@ -1971,13 +2128,7 @@ async function loadPriceGuide() {
               </h2>
               {!isMediaService && (
                 <div className="mt-6 grid gap-3 sm:grid-cols-2">
-                  {(
-                    pricingOptions?.services.map(
-                      (service) =>
-                        service.name
-                    ) ??
-                    documentTypes
-                  ).map((item) => (
+                  {availableDocumentTypes.map((item) => (
                     <button
                       key={item}
                       onClick={() =>

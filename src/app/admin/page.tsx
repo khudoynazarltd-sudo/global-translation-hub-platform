@@ -140,6 +140,11 @@ export default async function AdminDashboardPage() {
         .gte(
           "created_at",
           last24Hours
+        )
+        .not(
+          "path",
+          "like",
+          "/quote-funnel/%"
         ),
 
       supabaseAdmin
@@ -159,6 +164,11 @@ export default async function AdminDashboardPage() {
         .gte(
           "created_at",
           last7Days
+        )
+        .not(
+          "path",
+          "like",
+          "/quote-funnel/%"
         ),
 
       supabaseAdmin
@@ -178,6 +188,11 @@ export default async function AdminDashboardPage() {
         .gte(
           "created_at",
           last30Days
+        )
+        .not(
+          "path",
+          "like",
+          "/quote-funnel/%"
         ),
 
       supabaseAdmin
@@ -214,9 +229,25 @@ export default async function AdminDashboardPage() {
     analyticsRowsResult.data ??
     [];
 
+  const funnelRows =
+    analyticsRows.filter(
+      (visit) =>
+        visit.path.startsWith(
+          "/quote-funnel/"
+        )
+    );
+
+  const trafficRows =
+    analyticsRows.filter(
+      (visit) =>
+        !visit.path.startsWith(
+          "/quote-funnel/"
+        )
+    );
+
   const uniqueSessions =
     new Set(
-      analyticsRows
+      trafficRows
         .map(
           (visit) =>
             visit.session_id
@@ -230,11 +261,11 @@ export default async function AdminDashboardPage() {
 
 
   const pageViews30 =
-    analyticsRows.length;
+    trafficRows.length;
 
 
   const recentVisits =
-    analyticsRows.slice(
+    trafficRows.slice(
       0,
       12
     );
@@ -263,7 +294,7 @@ export default async function AdminDashboardPage() {
 
   for (
     const visit of
-    analyticsRows
+    trafficRows
   ) {
     const sourceLabel =
       visit.medium
@@ -352,6 +383,77 @@ export default async function AdminDashboardPage() {
         0,
         8
       );
+
+  const quoteFunnelSteps = [
+    [
+      "Quote Opened",
+      "/quote-funnel/upload",
+    ],
+    [
+      "Language Reached",
+      "/quote-funnel/language",
+    ],
+    [
+      "Document Type Reached",
+      "/quote-funnel/document",
+    ],
+    [
+      "Purpose Reached",
+      "/quote-funnel/purpose",
+    ],
+    [
+      "Turnaround / Price Reached",
+      "/quote-funnel/turnaround",
+    ],
+    [
+      "Contact Details Reached",
+      "/quote-funnel/contact",
+    ],
+    [
+      "Review Reached",
+      "/quote-funnel/review",
+    ],
+    [
+      "Enquiry Submitted",
+      "/quote-funnel/result",
+    ],
+  ] as const;
+
+
+  const quoteFunnel =
+    quoteFunnelSteps.map(
+      ([
+        label,
+        path,
+      ]) => {
+        const sessions =
+          new Set(
+            funnelRows
+              .filter(
+                (visit) =>
+                  visit.path ===
+                  path
+              )
+              .map(
+                (visit) =>
+                  visit.session_id
+              )
+              .filter(Boolean)
+          );
+
+        return {
+          label,
+          count:
+            sessions.size,
+        };
+      }
+    );
+
+
+  const quoteOpened =
+    quoteFunnel[0]
+      ?.count ??
+    0;
 
   return (
     <main className="min-h-screen bg-[#f5f8f6] text-[#13201a]">
@@ -508,6 +610,69 @@ export default async function AdminDashboardPage() {
             0
           }
         />
+
+      </div>
+
+
+      <div className="mt-8">
+
+        <div className="flex flex-wrap items-end justify-between gap-3">
+
+          <div>
+            <h3 className="font-bold">
+              Quote Funnel (30 Days)
+            </h3>
+
+            <p className="mt-1 text-sm text-[#69766f]">
+              Unique browser sessions that reached each stage of the quotation process.
+            </p>
+          </div>
+
+        </div>
+
+
+        <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+
+          {quoteFunnel.map(
+            (item) => {
+              const percentage =
+                quoteOpened > 0
+                  ? Math.round(
+                      (
+                        item.count /
+                        quoteOpened
+                      ) *
+                        100
+                    )
+                  : 0;
+
+
+              return (
+                <div
+                  key={
+                    item.label
+                  }
+                  className="rounded-xl border border-[#e3ebe6] bg-[#fafcfb] p-4"
+                >
+                  <div className="text-sm text-[#65736b]">
+                    {item.label}
+                  </div>
+
+                  <div className="mt-2 flex items-end justify-between gap-3">
+                    <strong className="text-2xl text-[#087f5b]">
+                      {item.count}
+                    </strong>
+
+                    <span className="text-sm font-semibold text-[#607067]">
+                      {percentage}%
+                    </span>
+                  </div>
+                </div>
+              );
+            }
+          )}
+
+        </div>
 
       </div>
 
