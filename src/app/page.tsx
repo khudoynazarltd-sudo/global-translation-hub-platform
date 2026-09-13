@@ -555,12 +555,9 @@ export default async function Home() {
             </p>
 
             <p>
-              Translation services are led by{" "}
-              <strong className="text-[#1b2922]">
-                Dr Zulfiyor Bakhtiyorov ACIL
-              </strong>
-              , Associate Member of the Chartered Institute of Linguists
-              (CIOL).
+              Translation services are provided under the GLOBAL TRANSLATION HUB
+              brand by KHUDOYNAZAR LTD for individuals, legal professionals and
+              businesses across the United Kingdom.
             </p>
 
             <p>

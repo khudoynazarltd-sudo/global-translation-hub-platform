@@ -36,9 +36,6 @@ export async function GET(request: Request) {
           source_language,
           target_language,
           certification_date,
-          translator_name,
-          translator_credentials,
-          ciol_membership_number,
           status,
           orders (
             order_reference
@@ -105,15 +102,6 @@ export async function GET(request: Request) {
 
         certificationDate:
           certificate.certification_date,
-
-        translatorName:
-          certificate.translator_name,
-
-        translatorCredentials:
-          certificate.translator_credentials,
-
-        ciolMembershipNumber:
-          certificate.ciol_membership_number,
 
         company:
           "GLOBAL TRANSLATION HUB / KHUDOYNAZAR LTD",

@@ -16,9 +16,6 @@ type VerificationResult = {
     sourceLanguage: string;
     targetLanguage: string;
     certificationDate: string | null;
-    translatorName: string;
-    translatorCredentials: string;
-    ciolMembershipNumber: string;
     company: string;
     companyNumber: string;
   };
@@ -192,30 +189,6 @@ export default function VerifyPage() {
                     result.certificate
                       .certificationDate
                   )}
-                />
-
-                <Info
-                  label="Translator"
-                  value={
-                    result.certificate
-                      .translatorName
-                  }
-                />
-
-                <Info
-                  label="Professional Status"
-                  value={
-                    result.certificate
-                      .translatorCredentials
-                  }
-                />
-
-                <Info
-                  label="CIOL Membership No."
-                  value={
-                    result.certificate
-                      .ciolMembershipNumber
-                  }
                 />
 
                 <Info
