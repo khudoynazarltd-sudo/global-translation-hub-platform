@@ -43,8 +43,13 @@ export async function POST(
     const formData =
       await request.formData();
 
-    const file =
-      formData.get("file");
+    const files =
+      formData
+        .getAll("file")
+        .filter(
+          (item): item is File =>
+            item instanceof File
+        );
 
     const fullName =
       String(
@@ -62,6 +67,40 @@ export async function POST(
       String(
         formData.get("telephone") ?? ""
       ).trim();
+
+    const orderSource =
+      String(
+        formData.get("orderSource") ??
+          "direct"
+      )
+        .trim()
+        .toLowerCase();
+
+    const allowedOrderSources =
+      new Set([
+        "direct",
+        "whatsapp",
+        "telegram",
+        "phone",
+        "email",
+        "referral",
+        "other",
+      ]);
+
+    if (
+      !allowedOrderSources.has(
+        orderSource
+      )
+    ) {
+      return NextResponse.json(
+        {
+          ok: false,
+          message:
+            "Invalid order source.",
+        },
+        { status: 400 }
+      );
+    }
 
     const sourceLanguage =
       String(
@@ -99,6 +138,29 @@ export async function POST(
         formData.get("price")
       );
 
+    const rawPageCount =
+      String(
+        formData.get(
+          "pageCount"
+        ) ?? ""
+      ).trim();
+
+    const parsedPageCount =
+      rawPageCount === ""
+        ? null
+        : Number(
+            rawPageCount
+          );
+
+    const pageCount =
+      parsedPageCount != null &&
+      Number.isInteger(
+        parsedPageCount
+      ) &&
+      parsedPageCount > 0
+        ? parsedPageCount
+        : null;
+
     if (
       !fullName ||
       !email ||
@@ -131,48 +193,43 @@ export async function POST(
       );
     }
 
-    if (!(file instanceof File)) {
-      return NextResponse.json(
-        {
-          ok: false,
-          message:
-            "A source document is required.",
-        },
-        { status: 400 }
-      );
-    }
+    for (const file of files) {
+      if (
+        file.size <= 0 ||
+        file.size > MAX_FILE_SIZE
+      ) {
+        return NextResponse.json(
+          {
+            ok: false,
+            message:
+              `The file "${file.name}" must not exceed 25 MB and must not be empty.`,
+          },
+          { status: 400 }
+        );
+      }
 
-    if (
-      file.size <= 0 ||
-      file.size > MAX_FILE_SIZE
-    ) {
-      return NextResponse.json(
-        {
-          ok: false,
-          message:
-            "The source document must not exceed 25 MB.",
-        },
-        { status: 400 }
-      );
-    }
-
-    if (
-      !ALLOWED_TYPES.has(file.type)
-    ) {
-      return NextResponse.json(
-        {
-          ok: false,
-          message:
-            "Only PDF, JPG, PNG and DOCX files are accepted.",
-        },
-        { status: 400 }
-      );
+      if (
+        !ALLOWED_TYPES.has(file.type)
+      ) {
+        return NextResponse.json(
+          {
+            ok: false,
+            message:
+              `The file "${file.name}" is not supported. Only PDF, JPG, PNG and DOCX files are accepted.`,
+          },
+          { status: 400 }
+        );
+      }
     }
 
     const expiresAt =
       new Date(
         Date.now() +
-          24 * 60 * 60 * 1000
+          7 *
+            24 *
+            60 *
+            60 *
+            1000
       ).toISOString();
 
     const {
@@ -185,6 +242,9 @@ export async function POST(
         email,
         telephone:
           telephone || null,
+
+        source:
+          orderSource,
 
         source_language:
           sourceLanguage,
@@ -234,103 +294,129 @@ export async function POST(
       );
     }
 
-    const extension =
-      extensionForFile(file);
+    const uploadedPaths: string[] =
+      [];
 
-    const storagePath =
-      `${enquiry.id}/${randomUUID()}${extension}`;
+    for (const file of files) {
+      const extension =
+        extensionForFile(file);
 
-    const fileBytes =
-      await file.arrayBuffer();
+      const storagePath =
+        `${enquiry.id}/${randomUUID()}${extension}`;
 
-    const {
-      error: uploadError,
-    } = await supabaseAdmin.storage
-      .from("temporary-enquiries")
-      .upload(
-        storagePath,
-        fileBytes,
-        {
-          contentType:
+      const fileBytes =
+        await file.arrayBuffer();
+
+      const {
+        error: uploadError,
+      } = await supabaseAdmin.storage
+        .from("temporary-enquiries")
+        .upload(
+          storagePath,
+          fileBytes,
+          {
+            contentType:
+              file.type,
+
+            upsert: false,
+          }
+        );
+
+      if (uploadError) {
+        if (
+          uploadedPaths.length > 0
+        ) {
+          await supabaseAdmin.storage
+            .from(
+              "temporary-enquiries"
+            )
+            .remove(
+              uploadedPaths
+            );
+        }
+
+        await supabaseAdmin
+          .from("enquiries")
+          .delete()
+          .eq("id", enquiry.id);
+
+        console.error(
+          "Manual enquiry document upload failed:",
+          uploadError
+        );
+
+        return NextResponse.json(
+          {
+            ok: false,
+            message:
+              "Unable to store source documents.",
+          },
+          { status: 500 }
+        );
+      }
+
+      uploadedPaths.push(
+        storagePath
+      );
+
+      const {
+        error: documentError,
+      } = await supabaseAdmin
+        .from("documents")
+        .insert({
+          enquiry_id:
+            enquiry.id,
+
+          storage_path:
+            storagePath,
+
+          original_filename:
+            file.name,
+
+          mime_type:
             file.type,
 
-          upsert: false,
-        }
-      );
+          file_size:
+            file.size,
 
-    if (uploadError) {
-      await supabaseAdmin
-        .from("enquiries")
-        .delete()
-        .eq("id", enquiry.id);
+          page_count:
+            pageCount,
 
-      console.error(
-        "Manual enquiry document upload failed:",
-        uploadError
-      );
+          status:
+            "temporary",
 
-      return NextResponse.json(
-        {
-          ok: false,
-          message:
-            "Unable to store source document.",
-        },
-        { status: 500 }
-      );
-    }
+          expires_at:
+            expiresAt,
+        });
 
-    const {
-      error: documentError,
-    } = await supabaseAdmin
-      .from("documents")
-      .insert({
-        enquiry_id:
-          enquiry.id,
+      if (documentError) {
+        await supabaseAdmin.storage
+          .from(
+            "temporary-enquiries"
+          )
+          .remove(
+            uploadedPaths
+          );
 
-        storage_path:
-          storagePath,
+        await supabaseAdmin
+          .from("enquiries")
+          .delete()
+          .eq("id", enquiry.id);
 
-        original_filename:
-          file.name,
+        console.error(
+          "Manual enquiry document record failed:",
+          documentError
+        );
 
-        mime_type:
-          file.type,
-
-        file_size:
-          file.size,
-
-        status:
-          "temporary",
-
-        expires_at:
-          expiresAt,
-      });
-
-    if (documentError) {
-      await supabaseAdmin.storage
-        .from("temporary-enquiries")
-        .remove([
-          storagePath,
-        ]);
-
-      await supabaseAdmin
-        .from("enquiries")
-        .delete()
-        .eq("id", enquiry.id);
-
-      console.error(
-        "Manual enquiry document record failed:",
-        documentError
-      );
-
-      return NextResponse.json(
-        {
-          ok: false,
-          message:
-            "Unable to save document record.",
-        },
-        { status: 500 }
-      );
+        return NextResponse.json(
+          {
+            ok: false,
+            message:
+              "Unable to save document records.",
+          },
+          { status: 500 }
+        );
+      }
     }
 
     return NextResponse.json({

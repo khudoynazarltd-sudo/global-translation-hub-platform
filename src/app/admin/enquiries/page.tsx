@@ -10,7 +10,6 @@ export default async function AdminEnquiriesPage() {
     await supabaseAdmin
       .from("enquiries")
       .select("*")
-      .eq("requires_manual_review", true)
       .order("created_at", { ascending: false });
 
   if (error) {
@@ -28,7 +27,7 @@ export default async function AdminEnquiriesPage() {
         </a>
 
         <h1 className="mt-3 text-4xl font-bold">
-          Manual Review Enquiries
+          Enquiries
         </h1>
 
         <div className="mt-8 space-y-4">
@@ -57,6 +56,13 @@ export default async function AdminEnquiriesPage() {
               </div>
 
               <div className="mt-2 text-sm">
+                Source:{" "}
+                <span className="font-semibold capitalize">
+                  {item.source || "website"}
+                </span>
+              </div>
+
+              <div className="mt-2 text-sm">
                 Status: {item.status}
               </div>
 
@@ -74,7 +80,7 @@ export default async function AdminEnquiriesPage() {
 
           {(enquiries ?? []).length === 0 && (
             <div className="rounded-2xl border border-[#dce6df] bg-white p-8 text-[#607067]">
-              No manual-review enquiries.
+              No enquiries.
             </div>
           )}
         </div>

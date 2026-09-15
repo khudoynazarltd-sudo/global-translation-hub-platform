@@ -21,6 +21,9 @@ export default function NewManualEnquiryPage() {
   const [telephone, setTelephone] =
     useState("");
 
+  const [orderSource, setOrderSource] =
+    useState("direct");
+
   const [
     sourceLanguage,
     setSourceLanguage,
@@ -47,8 +50,11 @@ export default function NewManualEnquiryPage() {
   const [price, setPrice] =
     useState("");
 
-  const [file, setFile] =
-    useState<File | null>(null);
+  const [pageCount, setPageCount] =
+    useState("");
+
+  const [files, setFiles] =
+    useState<File[]>([]);
 
   const [result, setResult] =
     useState<Result | null>(null);
@@ -66,14 +72,6 @@ export default function NewManualEnquiryPage() {
     event: FormEvent<HTMLFormElement>
   ) {
     event.preventDefault();
-
-    if (!file) {
-      setErrorMessage(
-        "Please select the source document."
-      );
-
-      return;
-    }
 
     setLoading(true);
     setErrorMessage("");
@@ -97,6 +95,11 @@ export default function NewManualEnquiryPage() {
       formData.append(
         "telephone",
         telephone.trim()
+      );
+
+      formData.append(
+        "orderSource",
+        orderSource
       );
 
       formData.append(
@@ -130,8 +133,17 @@ export default function NewManualEnquiryPage() {
       );
 
       formData.append(
-        "file",
-        file
+        "pageCount",
+        pageCount
+      );
+
+      files.forEach(
+        (selectedFile) => {
+          formData.append(
+            "file",
+            selectedFile
+          );
+        }
       );
 
       const response =
@@ -260,6 +272,64 @@ export default function NewManualEnquiryPage() {
               onChange={setFullName}
             />
 
+            <div>
+              <label className="mb-2 block text-sm font-semibold">
+                Order Source
+              </label>
+
+              <select
+                value={orderSource}
+                onChange={(event) =>
+                  setOrderSource(
+                    event.target.value
+                  )
+                }
+                className="w-full rounded-xl border border-[#d7e1da] bg-white px-4 py-3 outline-none focus:border-[#087f5b]"
+              >
+                <option value="direct">
+                  Direct / Admin
+                </option>
+                <option value="whatsapp">
+                  WhatsApp
+                </option>
+                <option value="telegram">
+                  Telegram
+                </option>
+                <option value="phone">
+                  Phone
+                </option>
+                <option value="email">
+                  Email
+                </option>
+                <option value="referral">
+                  Referral
+                </option>
+                <option value="other">
+                  Other
+                </option>
+              </select>
+            </div>
+
+            <div>
+              <label className="mb-2 block text-sm font-semibold">
+                Number of Pages
+              </label>
+
+              <input
+                type="number"
+                min="1"
+                step="1"
+                value={pageCount}
+                onChange={(event) =>
+                  setPageCount(
+                    event.target.value
+                  )
+                }
+                placeholder="Optional"
+                className="w-full rounded-xl border border-[#d7e1da] bg-white px-4 py-3 outline-none focus:border-[#087f5b]"
+              />
+            </div>
+
             <Field
               label="Email"
               value={email}
@@ -336,21 +406,27 @@ export default function NewManualEnquiryPage() {
 
           <div className="mt-6">
             <label className="mb-2 block text-sm font-semibold">
-              Source Document
+              Source Documents (optional)
             </label>
 
             <input
               type="file"
               accept=".pdf,.jpg,.jpeg,.png,.docx"
-              required
+              multiple
               onChange={(event) =>
-                setFile(
-                  event.target.files?.[0] ??
-                    null
+                setFiles(
+                  Array.from(
+                    event.target.files ??
+                      []
+                  )
                 )
               }
               className="block w-full rounded-xl border border-[#d7e1da] bg-white p-3"
             />
+
+            <p className="mt-2 text-sm text-[#65736b]">
+              You may select multiple files, or create the enquiry without documents and add them later.
+            </p>
           </div>
 
           {errorMessage && (

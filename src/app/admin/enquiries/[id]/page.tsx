@@ -13,7 +13,7 @@ import {
 } from "@/lib/supabase/admin";
 
 import ManualReviewActions from "@/app/admin/enquiries/ManualReviewActions";
-
+import ConfirmDeleteEnquiry from "@/app/admin/enquiries/ConfirmDeleteEnquiry";
 
 export const dynamic =
   "force-dynamic";
@@ -375,6 +375,52 @@ export default async function AdminEnquiryDetailsPage({
 
           </div>
 
+          <form
+            action={`/api/admin/enquiries/${enquiry.id}/documents`}
+            method="post"
+            encType="multipart/form-data"
+            className="mt-6 rounded-xl border border-[#dce6df] bg-[#f8fbf9] p-5"
+          >
+            <h3 className="font-bold">
+              Add Documents
+            </h3>
+
+            <p className="mt-2 text-sm leading-6 text-[#69766f]">
+              Add one or several source documents to this enquiry.
+            </p>
+
+            <input
+              name="files"
+              type="file"
+              multiple
+              required
+              accept=".pdf,.jpg,.jpeg,.png,.docx"
+              className="mt-4 block w-full rounded-xl border border-[#d7e1da] bg-white p-3"
+            />
+
+            <div className="mt-4">
+              <label className="mb-2 block text-sm font-semibold">
+                Number of Pages
+              </label>
+
+              <input
+                name="pageCount"
+                type="number"
+                min="1"
+                step="1"
+                placeholder="Optional"
+                className="w-full max-w-xs rounded-xl border border-[#d7e1da] bg-white px-4 py-3"
+              />
+            </div>
+
+            <button
+              type="submit"
+              className="mt-5 rounded-xl bg-[#087f5b] px-6 py-3 font-semibold text-white"
+            >
+              Upload Documents
+            </button>
+          </form>
+
         </section>
 
 
@@ -396,6 +442,44 @@ export default async function AdminEnquiryDetailsPage({
             enquiry.admin_notes
           }
         />
+
+        {enquiry.status !== "paid" && (
+          <section className="mt-6 rounded-2xl border border-[#ead8d8] bg-white p-6 shadow-sm">
+            <h2 className="text-xl font-bold">
+              Enquiry Management
+            </h2>
+
+            <p className="mt-2 text-sm leading-6 text-[#69766f]">
+              Extend the retention period by seven days or permanently delete this unpaid enquiry and its temporary source documents.
+            </p>
+
+            <div className="mt-5 flex flex-wrap gap-3">
+              <form
+                action={`/api/admin/enquiries/${enquiry.id}/lifecycle`}
+                method="post"
+              >
+                <input
+                  type="hidden"
+                  name="action"
+                  value="extend"
+                />
+
+                <button
+                  type="submit"
+                  className="rounded-xl border border-[#087f5b] px-5 py-3 font-semibold text-[#087f5b]"
+                >
+                  Extend +7 Days
+                </button>
+              </form>
+
+              <ConfirmDeleteEnquiry
+                enquiryId={
+                  enquiry.id
+                }
+              />
+            </div>
+          </section>
+        )}
 
 
       </div>
