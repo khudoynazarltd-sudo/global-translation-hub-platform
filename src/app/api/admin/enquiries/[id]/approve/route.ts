@@ -1,9 +1,13 @@
 import {
-  NextResponse,
+NextResponse,
 } from "next/server";
 
 import {
-  requireAdmin,
+randomBytes,
+} from "crypto";
+
+import {
+requireAdmin,
 } from "@/lib/auth/require-admin";
 
 import {
@@ -148,18 +152,69 @@ export async function POST(
         {
           status: 400,
         }
-      );
+  );
+}
+
+const {
+  data: existingOrder,
+  error: existingOrderError,
+} =
+  await supabaseAdmin
+    .from("orders")
+    .select("id")
+    .eq(
+      "enquiry_id",
+      enquiry.id
+    )
+    .limit(1)
+    .maybeSingle();
+
+
+if (existingOrderError) {
+  console.error(
+    "Unable to check existing order:",
+    existingOrderError
+  );
+
+  return NextResponse.json(
+    {
+      ok: false,
+      message:
+        "Unable to verify the payment status of this enquiry.",
+    },
+    {
+      status: 500,
     }
+  );
+}
 
 
-    const expiresAt =
-      new Date(
-        Date.now() +
-          24 *
-            60 *
-            60 *
-            1000
-      ).toISOString();
+if (
+  existingOrder ||
+  enquiry.status === "paid"
+) {
+  return NextResponse.json(
+    {
+      ok: false,
+      message:
+        "This enquiry has already been paid. A new payment link cannot be created.",
+    },
+    {
+      status: 409,
+    }
+  );
+}
+
+
+const expiresAt =
+  new Date(
+    Date.now() +
+      7 *
+        24 *
+        60 *
+        60 *
+        1000
+  ).toISOString();
 
 
     const {
@@ -283,14 +338,77 @@ export async function POST(
         {
           status: 500,
         }
-      );
+  );
+}
+
+const shortCode =
+  randomBytes(5)
+    .toString("hex")
+    .toUpperCase();
+
+
+const shortPaymentUrl =
+  `${appUrl}/p/${shortCode}`;
+
+
+const {
+  error: paymentLinkError,
+} =
+  await supabaseAdmin
+    .from("payment_links")
+    .upsert(
+      {
+        enquiry_id:
+          enquiry.id,
+
+        short_code:
+          shortCode,
+
+        stripe_session_id:
+          session.id,
+
+        stripe_checkout_url:
+          session.url,
+
+        status:
+          "active",
+
+        expires_at:
+          expiresAt,
+
+        updated_at:
+          new Date().toISOString(),
+      },
+      {
+        onConflict:
+          "enquiry_id",
+      }
+    );
+
+
+if (paymentLinkError) {
+  console.error(
+    "Payment link record creation failed:",
+    paymentLinkError
+  );
+
+  return NextResponse.json(
+    {
+      ok: false,
+      message:
+        "The Stripe payment page was created, but the short payment link could not be saved.",
+    },
+    {
+      status: 500,
     }
+  );
+}
 
 
-    try {
-      await sendQuotationReadyEmail({
-        to:
-          enquiry.email,
+try {
+  await sendQuotationReadyEmail({
+    to:
+      enquiry.email,
 
         clientName:
           enquiry.full_name ||
@@ -307,48 +425,48 @@ export async function POST(
           enquiry.target_language ||
           "",
 
-        documentType:
-          enquiry.document_type ||
-          "Translation",
+    documentType:
+      enquiry.document_type ||
+      "Translation",
 
-        turnaround,
+    turnaround,
 
-        checkoutUrl:
-          session.url,
-      });
-    } catch (emailError) {
-      console.error(
-        "Quotation payment email failed:",
-        emailError
-      );
+    checkoutUrl:
+      shortPaymentUrl,
+  });
+} catch (emailError) {
+  console.error(
+    "Quotation payment email failed:",
+    emailError
+  );
 
       return NextResponse.json(
         {
           ok: false,
 
-          message:
-            "The quotation was approved and the payment link was created, but the email could not be sent.",
+      message:
+        "The quotation was approved and the payment link was created, but the email could not be sent.",
 
-          checkoutUrl:
-            session.url,
-        },
-        {
-          status: 500,
-        }
-      );
+      checkoutUrl:
+        shortPaymentUrl,
+    },
+    {
+      status: 500,
+    }
+  );
     }
 
 
-    return NextResponse.json({
-      ok:
-        true,
+return NextResponse.json({
+  ok:
+    true,
 
-      checkoutUrl:
-        session.url,
+  checkoutUrl:
+    shortPaymentUrl,
 
-      message:
-        "Quotation approved and emailed to the client.",
-    });
+  message:
+    "Quotation approved and emailed to the client.",
+});
 
   } catch (error) {
     console.error(

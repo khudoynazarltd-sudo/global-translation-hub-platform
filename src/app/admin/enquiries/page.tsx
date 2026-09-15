@@ -10,6 +10,7 @@ export default async function AdminEnquiriesPage() {
     await supabaseAdmin
       .from("enquiries")
       .select("*")
+      .neq("status", "paid")
       .order("created_at", { ascending: false });
 
   if (error) {

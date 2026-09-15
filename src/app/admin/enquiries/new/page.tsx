@@ -171,7 +171,7 @@ export default function NewManualEnquiryPage() {
 
       const checkoutResponse =
         await fetch(
-          "/api/checkout",
+          `/api/admin/enquiries/${data.enquiryId}/approve`,
           {
             method: "POST",
 
@@ -181,8 +181,9 @@ export default function NewManualEnquiryPage() {
             },
 
             body: JSON.stringify({
-              enquiryId:
-                data.enquiryId,
+              price,
+              turnaround,
+              notes: "",
             }),
           }
         );
@@ -197,7 +198,7 @@ export default function NewManualEnquiryPage() {
       ) {
         throw new Error(
           checkoutData.message ||
-            "The enquiry was created, but the payment link could not be generated."
+            "The enquiry was created, but the payment link or quotation email could not be generated."
         );
       }
 

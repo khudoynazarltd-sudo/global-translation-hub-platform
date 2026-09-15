@@ -11,6 +11,60 @@ import { sendAdminPaymentReceivedEmail } from "@/lib/email/send-admin-payment-re
 export const runtime = "nodejs";
 
 
+function applyOrderSourcePrefix(
+  orderReference: string,
+  source: string | null
+) {
+  const sourcePrefix: Record<
+    string,
+    string
+  > = {
+    whatsapp: "WHA",
+    telegram: "TLM",
+    phone: "TLP",
+    email: "EML",
+    direct: "DIR",
+    referral: "REF",
+    other: "OTH",
+  };
+
+  const normalisedSource =
+    String(
+      source ?? "website"
+    )
+      .trim()
+      .toLowerCase();
+
+  if (
+    normalisedSource ===
+    "website"
+  ) {
+    return orderReference;
+  }
+
+  const prefix =
+    sourcePrefix[
+      normalisedSource
+    ];
+
+  if (!prefix) {
+    return orderReference;
+  }
+
+  if (
+    orderReference.startsWith(
+      "GTH-"
+    )
+  ) {
+    return `GTH-${prefix}-${orderReference.slice(
+      4
+    )}`;
+  }
+
+  return `${prefix}-${orderReference}`;
+}
+
+
 
 export async function POST(request: Request) {
   const signature = request.headers.get("stripe-signature");
@@ -88,6 +142,28 @@ export async function POST(request: Request) {
       }
 
       if (existingOrder) {
+        const {
+          error: paymentLinkUpdateError,
+        } =
+          await supabaseAdmin
+            .from("payment_links")
+            .update({
+              status: "paid",
+              updated_at:
+                new Date().toISOString(),
+            })
+            .eq(
+              "stripe_session_id",
+              session.id
+            );
+
+        if (paymentLinkUpdateError) {
+          console.error(
+            "Unable to close payment link after repeated Stripe webhook:",
+            paymentLinkUpdateError
+          );
+        }
+
         await recordPaidConversion(existingOrder, enquiryId, session, event);
         return NextResponse.json({
           ok: true,
@@ -157,27 +233,55 @@ export async function POST(request: Request) {
         referenceError
       );
 
-      throw new Error("Unable to generate order reference.");
-    }
+  throw new Error("Unable to generate order reference.");
+}
 
-    const { data: order, error: orderError } =
-      await supabaseAdmin
-        .from("orders")
-        .insert({
-          order_reference: orderReference,
-          enquiry_id: enquiryId,
-          payment_id: payment.id,
-          status: "awaiting_processing",
-          paid_at: new Date().toISOString(),
+const finalOrderReference =
+  applyOrderSourcePrefix(
+    String(orderReference),
+    enquiry.source
+  );
+
+const { data: order, error: orderError } =
+  await supabaseAdmin
+    .from("orders")
+    .insert({
+      order_reference: finalOrderReference,
+      enquiry_id: enquiryId,
+      payment_id: payment.id,
+      status: "awaiting_processing",
+      paid_at: new Date().toISOString(),
         })
         .select("id, order_reference")
         .single();
 
-    if (orderError || !order) {
-      throw new Error("Unable to create order.");
-    }
+if (orderError || !order) {
+  throw new Error("Unable to create order.");
+}
 
-    await recordPaidConversion(order, enquiryId, session, event);
+const {
+  error: paymentLinkUpdateError,
+} =
+  await supabaseAdmin
+    .from("payment_links")
+    .update({
+      status: "paid",
+      updated_at:
+        new Date().toISOString(),
+    })
+    .eq(
+      "stripe_session_id",
+      session.id
+    );
+
+if (paymentLinkUpdateError) {
+  console.error(
+    "Unable to close payment link after successful payment:",
+    paymentLinkUpdateError
+  );
+}
+
+await recordPaidConversion(order, enquiryId, session, event);
 
     try {
       const appUrl =
