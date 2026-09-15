@@ -6,6 +6,7 @@ import { supabaseAdmin } from "@/lib/supabase/admin";
 import { promoteSourceDocuments } from "@/lib/orders/promote-source-documents";
 import { createOrderAccessToken } from "@/lib/orders/access-token";
 import { sendOrderConfirmedEmail } from "@/lib/email/send-order-confirmed";
+import { sendAdminPaymentReceivedEmail } from "@/lib/email/send-admin-payment-received";
 
 export const runtime = "nodejs";
 
@@ -103,7 +104,7 @@ export async function POST(request: Request) {
       await supabaseAdmin
         .from("enquiries")
         .select(
-          "id, indicative_price, requires_manual_review, status"
+          "id, indicative_price, requires_manual_review, status, full_name, email, source"
         )
         .eq("id", enquiryId)
         .single();
@@ -178,6 +179,36 @@ export async function POST(request: Request) {
 
     await recordPaidConversion(order, enquiryId, session, event);
 
+    try {
+      const appUrl =
+        process.env.NEXT_PUBLIC_APP_URL ||
+        "http://localhost:3000";
+
+      const adminOrderUrl =
+        `${appUrl}/admin/orders/${order.id}`;
+
+      await sendAdminPaymentReceivedEmail({
+        orderReference:
+          order.order_reference,
+        amountPaid,
+        clientName:
+          enquiry.full_name ||
+          "Client",
+        clientEmail:
+          enquiry.email ||
+          "Not provided",
+        source:
+          enquiry.source ||
+          "website",
+        adminOrderUrl,
+      });
+    } catch (error) {
+      console.error(
+        "Admin payment notification email failed:",
+        error
+      );
+    }
+
     const { error: enquiryUpdateError } =
       await supabaseAdmin
         .from("enquiries")
@@ -238,13 +269,7 @@ export async function POST(request: Request) {
 
       if (clientAccessToken) {
         try {
-          const { data: enquiryDetails } = await supabaseAdmin
-            .from("enquiries")
-            .select("full_name, email")
-            .eq("id", enquiryId)
-            .maybeSingle();
-
-          if (enquiryDetails?.email) {
+          if (enquiry.email) {
             const appUrl =
               process.env.NEXT_PUBLIC_APP_URL ||
               "http://localhost:3000";
@@ -255,9 +280,9 @@ export async function POST(request: Request) {
               )}`;
 
             await sendOrderConfirmedEmail({
-              to: enquiryDetails.email,
+              to: enquiry.email,
               clientName:
-                enquiryDetails.full_name ||
+                enquiry.full_name ||
                 "Client",
               orderReference:
                 order.order_reference,
