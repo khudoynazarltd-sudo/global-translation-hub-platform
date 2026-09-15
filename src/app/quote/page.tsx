@@ -245,6 +245,48 @@ export default function QuotePage() {
   const [email, setEmail] = useState("");
   const [telephone, setTelephone] = useState("");
 
+  const [
+    emailVerificationId,
+    setEmailVerificationId,
+  ] =
+    useState("");
+
+  const [
+    emailVerificationCode,
+    setEmailVerificationCode,
+  ] =
+    useState("");
+
+  const [
+    emailVerified,
+    setEmailVerified,
+  ] =
+    useState(false);
+
+  const [
+    emailVerificationSending,
+    setEmailVerificationSending,
+  ] =
+    useState(false);
+
+  const [
+    emailVerificationChecking,
+    setEmailVerificationChecking,
+  ] =
+    useState(false);
+
+  const [
+    emailVerificationMessage,
+    setEmailVerificationMessage,
+  ] =
+    useState("");
+
+  const [
+    emailVerificationError,
+    setEmailVerificationError,
+  ] =
+    useState("");
+
   const [mediaItems, setMediaItems] =
     useState<MediaItem[]>([
       {
@@ -991,6 +1033,8 @@ async function loadPriceGuide() {
       ) &&
       fullName.trim() !== "" &&
       email.trim() !== "" &&
+      emailVerified &&
+      emailVerificationId !== "" &&
       sourceLanguage !== "" &&
       targetLanguage !== "" &&
       documentType !== "" &&
@@ -1005,6 +1049,8 @@ async function loadPriceGuide() {
     documentItems,
     fullName,
     email,
+    emailVerified,
+    emailVerificationId,
     sourceLanguage,
     targetLanguage,
     documentType,
@@ -1043,6 +1089,13 @@ async function loadPriceGuide() {
     setFullName("");
     setEmail("");
     setTelephone("");
+    setEmailVerificationId("");
+    setEmailVerificationCode("");
+    setEmailVerified(false);
+    setEmailVerificationSending(false);
+    setEmailVerificationChecking(false);
+    setEmailVerificationMessage("");
+    setEmailVerificationError("");
     setMediaItems([
       {
         id: "media-1",
@@ -1058,6 +1111,183 @@ async function loadPriceGuide() {
     setSubmitting(false);
     setSubmissionError("");
     setResult(null);
+  }
+
+  async function sendEmailVerification() {
+    const normalisedEmail =
+      email
+        .trim()
+        .toLowerCase();
+
+    if (!normalisedEmail) {
+      setEmailVerificationError(
+        "Please enter your email address."
+      );
+
+      return;
+    }
+
+    setEmailVerificationSending(
+      true
+    );
+    setEmailVerificationError("");
+    setEmailVerificationMessage("");
+    setEmailVerified(false);
+    setEmailVerificationCode("");
+
+    try {
+      const response =
+        await fetch(
+          "/api/email-verification/send",
+          {
+            method: "POST",
+
+            headers: {
+              "Content-Type":
+                "application/json",
+            },
+
+            body:
+              JSON.stringify({
+                email:
+                  normalisedEmail,
+              }),
+          }
+        );
+
+      const data =
+        await response.json();
+
+      if (
+        !response.ok ||
+        !data.ok ||
+        !data.verificationId
+      ) {
+        throw new Error(
+          data.message ||
+            "Unable to send verification code."
+        );
+      }
+
+      setEmail(
+        normalisedEmail
+      );
+
+      setEmailVerificationId(
+        data.verificationId
+      );
+
+      setEmailVerificationMessage(
+        "A six-digit verification code has been sent to your email address."
+      );
+
+    } catch (error) {
+      setEmailVerificationId("");
+
+      setEmailVerificationError(
+        error instanceof Error
+          ? error.message
+          : "Unable to send verification code."
+      );
+
+    } finally {
+      setEmailVerificationSending(
+        false
+      );
+    }
+  }
+
+  async function verifyEmailCode() {
+    if (
+      !emailVerificationId
+    ) {
+      setEmailVerificationError(
+        "Please request a verification code first."
+      );
+
+      return;
+    }
+
+    if (
+      !/^\d{6}$/.test(
+        emailVerificationCode
+      )
+    ) {
+      setEmailVerificationError(
+        "Please enter the six-digit verification code."
+      );
+
+      return;
+    }
+
+    setEmailVerificationChecking(
+      true
+    );
+    setEmailVerificationError("");
+    setEmailVerificationMessage("");
+
+    try {
+      const response =
+        await fetch(
+          "/api/email-verification/verify",
+          {
+            method: "POST",
+
+            headers: {
+              "Content-Type":
+                "application/json",
+            },
+
+            body:
+              JSON.stringify({
+                verificationId:
+                  emailVerificationId,
+
+                email:
+                  email
+                    .trim()
+                    .toLowerCase(),
+
+                code:
+                  emailVerificationCode,
+              }),
+          }
+        );
+
+      const data =
+        await response.json();
+
+      if (
+        !response.ok ||
+        !data.ok ||
+        !data.verified
+      ) {
+        throw new Error(
+          data.message ||
+            "Unable to verify email address."
+        );
+      }
+
+      setEmailVerified(true);
+
+      setEmailVerificationMessage(
+        "Email address verified successfully."
+      );
+
+    } catch (error) {
+      setEmailVerified(false);
+
+      setEmailVerificationError(
+        error instanceof Error
+          ? error.message
+          : "Unable to verify email address."
+      );
+
+    } finally {
+      setEmailVerificationChecking(
+        false
+      );
+    }
   }
 
   function toggleMediaOutputOption(
@@ -1258,6 +1488,12 @@ async function loadPriceGuide() {
         "email",
         email.trim()
       );
+
+      formData.append(
+        "emailVerificationId",
+        emailVerificationId
+      );
+
       formData.append(
         "telephone",
         telephone.trim()
@@ -2551,9 +2787,135 @@ async function loadPriceGuide() {
                   <input
                     type="email"
                     value={email}
-                    onChange={(event) => setEmail(event.target.value)}
+                    onChange={(event) => {
+                      setEmail(
+                        event.target.value
+                      );
+
+                      setEmailVerificationId("");
+                      setEmailVerificationCode("");
+                      setEmailVerified(false);
+                      setEmailVerificationMessage("");
+                      setEmailVerificationError("");
+                    }}
+                    disabled={
+                      emailVerified
+                    }
                     className="w-full rounded-xl border border-[#d7e1da] px-4 py-4 outline-none focus:border-[#087f5b]"
                   />
+
+                  {!emailVerified && (
+                    <div className="mt-3">
+                      {!emailVerificationId ? (
+                        <button
+                          type="button"
+                          disabled={
+                            emailVerificationSending ||
+                            !email.trim()
+                          }
+                          onClick={
+                            sendEmailVerification
+                          }
+                          className="rounded-lg border border-[#087f5b] px-5 py-3 text-sm font-semibold text-[#087f5b] disabled:cursor-not-allowed disabled:opacity-40"
+                        >
+                          {emailVerificationSending
+                            ? "Sending code..."
+                            : "Verify Email"}
+                        </button>
+                      ) : (
+                        <div className="rounded-xl border border-[#d7e1da] bg-[#f8fbf9] p-4">
+                          <label className="mb-2 block text-sm font-semibold">
+                            Verification Code
+                          </label>
+
+                          <div className="flex flex-col gap-3 sm:flex-row">
+                            <input
+                              type="text"
+                              inputMode="numeric"
+                              autoComplete="one-time-code"
+                              maxLength={6}
+                              value={
+                                emailVerificationCode
+                              }
+                              onChange={(event) =>
+                                setEmailVerificationCode(
+                                  event.target.value.replace(
+                                    /\D/g,
+                                    ""
+                                  )
+                                )
+                              }
+                              placeholder="6-digit code"
+                              className="w-full rounded-xl border border-[#d7e1da] bg-white px-4 py-3 outline-none focus:border-[#087f5b]"
+                            />
+
+                            <button
+                              type="button"
+                              disabled={
+                                emailVerificationChecking ||
+                                emailVerificationCode.length !==
+                                  6
+                              }
+                              onClick={
+                                verifyEmailCode
+                              }
+                              className="shrink-0 rounded-lg bg-[#087f5b] px-5 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-40"
+                            >
+                              {emailVerificationChecking
+                                ? "Checking..."
+                                : "Confirm Code"}
+                            </button>
+                          </div>
+
+                          <button
+                            type="button"
+                            disabled={
+                              emailVerificationSending
+                            }
+                            onClick={
+                              sendEmailVerification
+                            }
+                            className="mt-3 text-sm font-semibold text-[#087f5b] hover:underline disabled:opacity-40"
+                          >
+                            Send another code
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {emailVerified && (
+                    <div className="mt-3 flex items-center justify-between gap-4 rounded-xl bg-[#eaf8f0] px-4 py-3 text-sm font-semibold text-[#087f5b]">
+                      <span>
+                        Email verified
+                      </span>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setEmailVerified(false);
+                          setEmailVerificationId("");
+                          setEmailVerificationCode("");
+                          setEmailVerificationMessage("");
+                        }}
+                        className="underline"
+                      >
+                        Change Email
+                      </button>
+                    </div>
+                  )}
+
+                  {emailVerificationMessage && (
+                    <div className="mt-3 rounded-xl bg-[#eef8f2] px-4 py-3 text-sm text-[#087f5b]">
+                      {emailVerificationMessage}
+                    </div>
+                  )}
+
+                  {emailVerificationError && (
+                    <div className="mt-3 rounded-xl bg-[#fff0ed] px-4 py-3 text-sm text-[#9a3f2f]">
+                      {emailVerificationError}
+                    </div>
+                  )}
                 </div>
 
                 <div>
@@ -2634,6 +2996,7 @@ async function loadPriceGuide() {
                   disabled={
                     !fullName.trim() ||
                     !email.trim() ||
+                    !emailVerified ||
                     !authorised ||
                     !authenticityAccepted ||
                     !termsAccepted

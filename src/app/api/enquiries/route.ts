@@ -248,7 +248,17 @@ export async function POST(
     ).trim();
     const email = String(
       formData.get("email") ?? ""
-    ).trim();
+    )
+      .trim()
+      .toLowerCase();
+
+    const emailVerificationId =
+      String(
+        formData.get(
+          "emailVerificationId"
+        ) ?? ""
+      ).trim();
+
     const telephone = String(
       formData.get("telephone") ?? ""
     ).trim();
@@ -459,6 +469,114 @@ export async function POST(
             "At least one document file is required.",
         },
         { status: 400 }
+      );
+    }
+
+    if (!emailVerificationId) {
+      return NextResponse.json(
+        {
+          ok: false,
+          message:
+            "Please verify your email address before submitting the enquiry.",
+        },
+        { status: 400 }
+      );
+    }
+
+    const {
+      data: emailVerification,
+      error: emailVerificationError,
+    } =
+      await supabaseAdmin
+        .from(
+          "email_verifications"
+        )
+        .select(`
+          id,
+          email,
+          expires_at,
+          verified_at,
+          consumed_at
+        `)
+        .eq(
+          "id",
+          emailVerificationId
+        )
+        .maybeSingle();
+
+    if (
+      emailVerificationError ||
+      !emailVerification
+    ) {
+      return NextResponse.json(
+        {
+          ok: false,
+          message:
+            "Email verification could not be confirmed. Please verify your email again.",
+        },
+        { status: 400 }
+      );
+    }
+
+    if (
+      emailVerification.email !==
+      email
+    ) {
+      return NextResponse.json(
+        {
+          ok: false,
+          message:
+            "The verified email address does not match the submitted email address.",
+        },
+        { status: 400 }
+      );
+    }
+
+    if (
+      !emailVerification.verified_at
+    ) {
+      return NextResponse.json(
+        {
+          ok: false,
+          message:
+            "Please verify your email address before submitting the enquiry.",
+        },
+        { status: 400 }
+      );
+    }
+
+    if (
+      emailVerification.consumed_at
+    ) {
+      return NextResponse.json(
+        {
+          ok: false,
+          message:
+            "This email verification has already been used. Please verify your email again.",
+        },
+        { status: 409 }
+      );
+    }
+
+    const emailVerificationExpiresAt =
+      new Date(
+        emailVerification.expires_at
+      ).getTime();
+
+    if (
+      !Number.isFinite(
+        emailVerificationExpiresAt
+      ) ||
+      emailVerificationExpiresAt <=
+        Date.now()
+    ) {
+      return NextResponse.json(
+        {
+          ok: false,
+          message:
+            "Your email verification has expired. Please verify your email again.",
+        },
+        { status: 410 }
       );
     }
 
@@ -1001,6 +1119,46 @@ export async function POST(
           emailError
         );
       }
+    }
+
+    const consumedAt =
+      new Date().toISOString();
+
+    const {
+      data:
+        consumedVerification,
+      error:
+        consumeVerificationError,
+    } =
+      await supabaseAdmin
+        .from(
+          "email_verifications"
+        )
+        .update({
+          consumed_at:
+            consumedAt,
+
+          updated_at:
+            consumedAt,
+        })
+        .eq(
+          "id",
+          emailVerification.id
+        )
+        .is(
+          "consumed_at",
+          null
+        )
+        .select("id")
+        .maybeSingle();
+
+    if (
+      consumeVerificationError ||
+      !consumedVerification
+    ) {
+      throw new Error(
+        "Unable to consume email verification."
+      );
     }
 
     // From this point the storage objects belong to the enquiry.
