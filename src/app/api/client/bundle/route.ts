@@ -27,16 +27,17 @@ export async function GET(request: Request) {
     const tokenHash =
       hashOrderAccessToken(token);
 
-    const {
-      data: access,
-      error: accessError,
-    } = await supabaseAdmin
-      .from("order_access_tokens")
-      .select(`
-        order_id,
-        expires_at,
-        revoked_at
-      `)
+const {
+  data: access,
+  error: accessError,
+} = await supabaseAdmin
+  .from("order_access_tokens")
+  .select(`
+    id,
+    order_id,
+    expires_at,
+    revoked_at
+  `)
       .eq("token_hash", tokenHash)
       .maybeSingle();
 
@@ -125,12 +126,33 @@ export async function GET(request: Request) {
             "Unable to create secure bundle download link.",
         },
         { status: 500 }
-      );
-    }
+  );
+}
 
-    return NextResponse.redirect(
-      data.signedUrl
-    );
+const {
+  error: downloadEventError,
+} = await supabaseAdmin
+  .from(
+    "certificate_download_events"
+  )
+  .insert({
+    order_id:
+      access.order_id,
+
+    access_token_id:
+      access.id,
+  });
+
+if (downloadEventError) {
+  console.error(
+    "Certified bundle download event logging failed:",
+    downloadEventError
+  );
+}
+
+return NextResponse.redirect(
+  data.signedUrl
+);
   } catch (error) {
     console.error(
       "Client bundle download failed:",
