@@ -8,6 +8,7 @@ import ClientAccessLink from "@/app/admin/orders/ClientAccessLink";
 import CertificateDetails from "@/app/admin/orders/CertificateDetails";
 import CertificateActions from "@/app/admin/orders/CertificateActions";
 import TranslatorAssignment from "@/app/admin/orders/TranslatorAssignment";
+import DeleteFinalTranslation from "@/app/admin/orders/DeleteFinalTranslation";
 
 export const dynamic = "force-dynamic";
 
@@ -323,14 +324,22 @@ export default async function AdminOrderDetailsPage({
                   </div>
                 </div>
 
-                <a
-                  href={`/api/admin/documents/${document.id}/view`}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="rounded-lg bg-[#087f5b] px-4 py-2 text-center text-sm font-semibold text-white"
-                >
-                  View Final Translation
-                </a>
+                <div className="flex flex-wrap items-center gap-3">
+                  <a
+                    href={`/api/admin/documents/${document.id}/view`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="rounded-lg bg-[#087f5b] px-4 py-2 text-center text-sm font-semibold text-white"
+                  >
+                    View Final Translation
+                  </a>
+
+                  <DeleteFinalTranslation
+                    orderId={order.id}
+                    documentId={document.id}
+                    filename={document.original_filename}
+                  />
+                </div>
               </div>
             ))}
 
@@ -360,7 +369,19 @@ export default async function AdminOrderDetailsPage({
             currentStatus={order.status}
           />
           <FinalFileUpload orderId={order.id} />
-          <ClientAccessLink orderId={order.id} />
+          <ClientAccessLink
+            orderId={order.id}
+            bundleReady={
+              certificate?.status ===
+                "issued" &&
+              Boolean(
+                certificate.bundle_storage_path
+              )
+            }
+            clientEmail={
+              enquiry?.email
+            }
+          />
           <CertificateDetails orderId={order.id} />
           {certificate && (
             <CertificateActions
@@ -378,7 +399,7 @@ export default async function AdminOrderDetailsPage({
                   rel="noreferrer"
                   className="inline-flex rounded-xl bg-[#102b20] px-6 py-3 font-semibold text-white"
                 >
-                  View Certified Bundle
+                  Download Final Package
                 </a>
               </div>
             )}

@@ -65,6 +65,25 @@ export function renderCertificateHtml(
         )}`
       : "Email: corporate email to be confirmed";
 
+  const securityPattern =
+    Array.from(
+      {
+        length: 48,
+      },
+      () => `
+        <div class="security-mark">
+          <img
+            src="${input.watermarkDataUrl}"
+            alt=""
+          />
+
+          <span>
+            GLOBAL TRANSLATION HUB
+          </span>
+        </div>
+      `
+    ).join("");
+
   return `
 <!doctype html>
 
@@ -131,6 +150,68 @@ export function renderCertificateHtml(
       opacity: 0.08;
 
       z-index: 0;
+    }
+
+    .security-pattern {
+      position: absolute;
+
+      left: -22mm;
+      top: -18mm;
+
+      width: 254mm;
+      height: 333mm;
+
+      display: grid;
+
+      grid-template-columns:
+        repeat(
+          4,
+          1fr
+        );
+
+      grid-auto-rows:
+        25mm;
+
+      align-items: center;
+
+      transform:
+        rotate(-18deg);
+
+      transform-origin:
+        center;
+
+      opacity: 0.07;
+
+      z-index: 0;
+
+      pointer-events: none;
+    }
+
+    .security-mark {
+      display: flex;
+
+      align-items: center;
+      justify-content: center;
+
+      gap: 2.5mm;
+
+      color: #087f5b;
+
+      font-size: 7px;
+      line-height: 1;
+
+      font-weight: 700;
+
+      letter-spacing: 0.45px;
+
+      white-space: nowrap;
+    }
+
+    .security-mark img {
+      width: 7.5mm;
+      height: 7.5mm;
+
+      object-fit: contain;
     }
 
     .content {
@@ -503,6 +584,13 @@ export function renderCertificateHtml(
       src="${input.watermarkDataUrl}"
       alt=""
     />
+
+    <div
+      class="security-pattern"
+      aria-hidden="true"
+    >
+      ${securityPattern}
+    </div>
 
     <div class="content">
 

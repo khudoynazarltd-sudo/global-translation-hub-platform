@@ -141,3 +141,236 @@ export async function POST(
     message: "Final translation uploaded successfully.",
   });
 }
+
+export async function DELETE(
+  request: Request,
+  context: {
+    params: Promise<{ id: string }>;
+  }
+) {
+  const { user } =
+    await requireAdmin();
+
+  const { id: orderId } =
+    await context.params;
+
+  const { searchParams } =
+    new URL(request.url);
+
+  const documentId =
+    searchParams.get(
+      "documentId"
+    );
+
+  if (!documentId) {
+    return NextResponse.json(
+      {
+        ok: false,
+        message:
+          "A translation document ID is required.",
+      },
+      {
+        status: 400,
+      }
+    );
+  }
+
+  const {
+    data: order,
+    error: orderError,
+  } = await supabaseAdmin
+    .from("orders")
+    .select(`
+      id,
+      enquiry_id
+    `)
+    .eq(
+      "id",
+      orderId
+    )
+    .maybeSingle();
+
+  if (
+    orderError ||
+    !order
+  ) {
+    return NextResponse.json(
+      {
+        ok: false,
+        message:
+          "Order not found.",
+      },
+      {
+        status: 404,
+      }
+    );
+  }
+
+  const {
+    data: document,
+    error: documentError,
+  } = await supabaseAdmin
+    .from("documents")
+    .select(`
+      id,
+      storage_path,
+      original_filename
+    `)
+    .eq(
+      "id",
+      documentId
+    )
+    .eq(
+      "enquiry_id",
+      order.enquiry_id
+    )
+    .eq(
+      "status",
+      "final_translation"
+    )
+    .maybeSingle();
+
+  if (
+    documentError ||
+    !document
+  ) {
+    return NextResponse.json(
+      {
+        ok: false,
+        message:
+          "Final translation not found.",
+      },
+      {
+        status: 404,
+      }
+    );
+  }
+
+  const {
+    error: storageError,
+  } =
+    await supabaseAdmin.storage
+      .from(
+        "order-final-files"
+      )
+      .remove([
+        document.storage_path,
+      ]);
+
+  if (storageError) {
+    console.error(
+      "Final translation storage deletion failed:",
+      storageError
+    );
+
+    return NextResponse.json(
+      {
+        ok: false,
+        message:
+          "Unable to remove the final translation file.",
+      },
+      {
+        status: 500,
+      }
+    );
+  }
+
+  const {
+    error: deleteError,
+  } = await supabaseAdmin
+    .from("documents")
+    .delete()
+    .eq(
+      "id",
+      document.id
+    );
+
+  if (deleteError) {
+    console.error(
+      "Final translation metadata deletion failed:",
+      deleteError
+    );
+
+    return NextResponse.json(
+      {
+        ok: false,
+        message:
+          "Unable to remove the final translation record.",
+      },
+      {
+        status: 500,
+      }
+    );
+  }
+
+  const {
+    data: certificate,
+  } = await supabaseAdmin
+    .from("certificates")
+    .select(`
+      id,
+      status,
+      bundle_storage_path
+    `)
+    .eq(
+      "order_id",
+      order.id
+    )
+    .maybeSingle();
+
+  if (
+    certificate?.bundle_storage_path
+  ) {
+    await supabaseAdmin.storage
+      .from(
+        "certified-bundles"
+      )
+      .remove([
+        certificate.bundle_storage_path,
+      ]);
+
+    await supabaseAdmin
+      .from("certificates")
+      .update({
+        status:
+          "approved",
+
+        bundle_storage_path:
+          null,
+
+        updated_at:
+          new Date().toISOString(),
+      })
+      .eq(
+        "id",
+        certificate.id
+      );
+  }
+
+  await supabaseAdmin
+    .from(
+      "order_status_history"
+    )
+    .insert({
+      order_id:
+        order.id,
+
+      previous_status:
+        null,
+
+      new_status:
+        "final_file_removed",
+
+      changed_by:
+        user.id,
+
+      notes:
+        `Final translation removed by administrator: ${document.original_filename}`,
+    });
+
+  return NextResponse.json({
+    ok: true,
+    message:
+      "Final translation removed successfully.",
+  });
+}

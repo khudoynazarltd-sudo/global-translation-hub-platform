@@ -6,6 +6,8 @@ import { renderCertificatePdf } from "@/lib/certificate/render-certificate-pdf";
 import {
   PDFDocument,
   StandardFonts,
+  degrees,
+  rgb,
 } from "pdf-lib";
 
 import fs from "fs/promises";
@@ -106,6 +108,43 @@ export async function POST(
         { status: 400 }
       );
     }
+
+    const certificationDate =
+      new Date()
+        .toISOString()
+        .slice(0, 10);
+
+    const {
+      data: certificateForBundle,
+      error: certificateDateError,
+    } = await supabaseAdmin
+      .from("certificates")
+      .update({
+        date_returned:
+          certificationDate,
+
+        certification_date:
+          certificationDate,
+
+        updated_at:
+          new Date().toISOString(),
+      })
+      .eq(
+        "id",
+        certificate.id
+      )
+      .select("*")
+      .single();
+
+    if (
+      certificateDateError ||
+      !certificateForBundle
+    ) {
+      throw new Error(
+        "Unable to update certificate completion dates."
+      );
+    }
+
     const {
       data: finalDocuments,
       error: finalDocumentsError,
@@ -144,7 +183,7 @@ export async function POST(
         {
           ok: false,
           message:
-            "A final translation in PDF format is required before generating the certified bundle.",
+            "The certified bundle requires a PDF version of the final translation. If the translator uploaded only a DOCX file, please upload the corresponding PDF version before generating the bundle.",
         },
         { status: 400 }
       );
@@ -313,7 +352,8 @@ export async function POST(
 
     const certificateHtml =
       await buildCertificateHtml({
-        certificate,
+        certificate:
+          certificateForBundle,
 
         order: {
           order_reference:
@@ -382,6 +422,163 @@ export async function POST(
         width,
         height,
       } = copiedPage.getSize();
+
+      /*
+        Large central brand watermark.
+        Applied only to the certified translation pages.
+      */
+
+      const largeWatermarkScale =
+        Math.min(
+          (width * 0.56) /
+            watermark.width,
+          (height * 0.56) /
+            watermark.height
+        );
+
+      const largeWatermarkWidth =
+        watermark.width *
+        largeWatermarkScale;
+
+      const largeWatermarkHeight =
+        watermark.height *
+        largeWatermarkScale;
+
+      copiedPage.drawImage(
+        watermark,
+        {
+          x:
+            (width -
+              largeWatermarkWidth) /
+            2,
+
+          y:
+            (height -
+              largeWatermarkHeight) /
+            2,
+
+          width:
+            largeWatermarkWidth,
+
+          height:
+            largeWatermarkHeight,
+
+          opacity:
+            0.075,
+        }
+      );
+
+      /*
+        Repeating security-paper pattern.
+        This is deliberately subtle so that the
+        translated text remains fully readable.
+      */
+
+      const securityLogoScale =
+        Math.min(
+          23 /
+            watermark.width,
+          23 /
+            watermark.height
+        );
+
+      const securityLogoWidth =
+        watermark.width *
+        securityLogoScale;
+
+      const securityLogoHeight =
+        watermark.height *
+        securityLogoScale;
+
+      const securityText =
+        "GLOBAL TRANSLATION HUB";
+
+      const horizontalSpacing =
+        142;
+
+      const verticalSpacing =
+        62;
+
+      for (
+        let row = -1;
+        row <=
+          Math.ceil(
+            height /
+              verticalSpacing
+          ) + 1;
+        row++
+      ) {
+        const y =
+          row *
+            verticalSpacing +
+          14;
+
+        const rowOffset =
+          row % 2 === 0
+            ? 0
+            : 72;
+
+        for (
+          let x =
+            -horizontalSpacing +
+            rowOffset;
+          x <
+          width +
+            horizontalSpacing;
+          x +=
+            horizontalSpacing
+        ) {
+          copiedPage.drawImage(
+            watermark,
+            {
+              x,
+              y,
+
+              width:
+                securityLogoWidth,
+
+              height:
+                securityLogoHeight,
+
+              opacity:
+                0.055,
+
+              rotate:
+                degrees(22),
+            }
+          );
+
+          copiedPage.drawText(
+            securityText,
+            {
+              x:
+                x + 27,
+
+              y:
+                y + 3,
+
+              size:
+                7,
+
+              font:
+                regularFont,
+
+              color:
+                rgb(
+                  0.031,
+                  0.498,
+                  0.357
+                ),
+
+              opacity:
+                0.065,
+
+              rotate:
+                degrees(22),
+            }
+          );
+        }
+      }
 
       const pageStampScale =
         Math.min(
@@ -612,7 +809,7 @@ export async function POST(
       })
       .eq(
         "id",
-        certificate.id
+        certificateForBundle.id
       )
       .select("*")
       .single();

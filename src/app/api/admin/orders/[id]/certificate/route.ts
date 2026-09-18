@@ -74,8 +74,17 @@ export async function GET(
       order.order_reference
     );
 
+  const assignedDate =
+    new Date(
+      order.created_at
+    )
+      .toISOString()
+      .slice(0, 10);
+
   const today =
-    new Date().toISOString().slice(0, 10);
+    new Date()
+      .toISOString()
+      .slice(0, 10);
 
   const certificationStatement =
     `I, Dr Zulfiyor Bakhtiyorov ACIL, hereby certify that I am proficient in ` +
@@ -110,7 +119,8 @@ export async function GET(
       target_language:
         enquiry?.target_language ?? "",
 
-      date_assigned: today,
+      date_assigned:
+        assignedDate,
       date_returned: today,
       certification_date: today,
 

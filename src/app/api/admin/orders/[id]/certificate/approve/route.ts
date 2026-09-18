@@ -42,38 +42,39 @@ export async function POST(
     );
   }
 
-  if (
-    !certificate.document_title ||
-    !certificate.number_of_pages ||
-    !certificate.client_name ||
-    !certificate.source_language ||
-    !certificate.target_language ||
-    !certificate.date_assigned ||
-    !certificate.date_returned ||
-    !certificate.certification_date ||
-    !certificate.certification_statement
-  ) {
-    return NextResponse.json(
-      {
-        ok: false,
+if (
+!certificate.document_title ||
+!certificate.number_of_pages ||
+!certificate.client_name ||
+!certificate.source_language ||
+!certificate.target_language ||
+!certificate.date_assigned ||
+!certificate.certification_statement
+) {
+return NextResponse.json(
+{
+ok: false,
         message:
           "Certificate details are incomplete. Please review all required fields before approval.",
       },
       { status: 400 }
     );
-  }
+}
 
-  const approvedAt = new Date().toISOString();
+const approvedAt = new Date().toISOString();
+const approvedDate = approvedAt.slice(0, 10);
 
-  const { data: approvedCertificate, error: updateError } =
-    await supabaseAdmin
-      .from("certificates")
-      .update({
-        status: "approved",
-        approved_at: approvedAt,
-        updated_at: approvedAt,
-      })
-      .eq("id", certificate.id)
+const { data: approvedCertificate, error: updateError } =
+await supabaseAdmin
+.from("certificates")
+.update({
+status: "approved",
+date_returned: approvedDate,
+certification_date: approvedDate,
+approved_at: approvedAt,
+updated_at: approvedAt,
+})
+.eq("id", certificate.id)
       .select("*")
       .single();
 
