@@ -9,6 +9,7 @@ import CertificateDetails from "@/app/admin/orders/CertificateDetails";
 import CertificateActions from "@/app/admin/orders/CertificateActions";
 import TranslatorAssignment from "@/app/admin/orders/TranslatorAssignment";
 import DeleteFinalTranslation from "@/app/admin/orders/DeleteFinalTranslation";
+import SourceDocumentManager from "@/app/admin/orders/SourceDocumentManager";
 
 export const dynamic = "force-dynamic";
 
@@ -255,52 +256,12 @@ export default async function AdminOrderDetailsPage({
           </section>
         </div>
 
-        <section className="mt-6 rounded-2xl border border-[#dce6df] bg-white p-6 shadow-sm">
-          <h2 className="text-xl font-bold">
-            Source Documents
-          </h2>
-
-          <div className="mt-5 space-y-3">
-            {(sourceDocuments ?? []).map((document) => (
-              <div
-                key={document.id}
-                className="flex flex-col gap-2 rounded-xl border border-[#e3ebe6] bg-[#fafcfb] p-4 sm:flex-row sm:items-center sm:justify-between"
-              >
-                <div>
-                  <div className="font-semibold">
-                    {document.original_filename}
-                  </div>
-
-                  <div className="mt-1 text-xs text-[#69766f]">
-                    {document.mime_type} ·{" "}
-                    {(Number(document.file_size) / 1024 / 1024).toFixed(2)} MB
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-3">
-                  <span className="text-sm font-medium text-[#65736b]">
-                    {readableStatus(document.status)}
-                  </span>
-
-                  <a
-                    href={`/api/admin/documents/${document.id}/view`}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="rounded-lg bg-[#087f5b] px-4 py-2 text-sm font-semibold text-white"
-                  >
-                    View Document
-                  </a>
-                </div>
-              </div>
-            ))}
-
-            {(sourceDocuments ?? []).length === 0 && (
-              <div className="text-sm text-[#69766f]">
-                No source documents found.
-              </div>
-            )}
-          </div>
-        </section>
+        <SourceDocumentManager
+          orderId={order.id}
+          documents={
+            sourceDocuments ?? []
+          }
+        />
 
         <section className="mt-6 rounded-2xl border border-[#dce6df] bg-white p-6 shadow-sm">
           <h2 className="text-xl font-bold">

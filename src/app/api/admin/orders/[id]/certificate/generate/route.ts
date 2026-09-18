@@ -606,6 +606,108 @@ export async function POST(
         opacity: 0.9,
       });
 
+      /*
+        Certified translation footer.
+        Applied only to translation pages.
+      */
+
+      const footerLineY =
+        20;
+
+      copiedPage.drawLine({
+        start: {
+          x: 28,
+          y:
+            footerLineY +
+            16,
+        },
+
+        end: {
+          x:
+            width -
+            118,
+          y:
+            footerLineY +
+            16,
+        },
+
+        thickness:
+          0.5,
+
+        color:
+          rgb(
+            0.75,
+            0.82,
+            0.78
+          ),
+      });
+
+      copiedPage.drawText(
+        "GLOBAL TRANSLATION HUB - Certified Translation",
+        {
+          x: 28,
+          y:
+            footerLineY +
+            7,
+
+          size: 6.5,
+
+          font:
+            boldFont,
+
+          color:
+            rgb(
+              0.031,
+              0.498,
+              0.357
+            ),
+        }
+      );
+
+      copiedPage.drawText(
+        `Order Ref: ${order.order_reference}  |  Certificate Ref: ${certificateForBundle.certificate_reference}`,
+        {
+          x: 28,
+          y:
+            footerLineY -
+            1,
+
+          size: 5.7,
+
+          font:
+            regularFont,
+
+          color:
+            rgb(
+              0.28,
+              0.35,
+              0.31
+            ),
+        }
+      );
+
+      copiedPage.drawText(
+        `Page ${index + 1} of ${copiedFinalPages.length}  |  globaltranslationhub.co.uk/verify`,
+        {
+          x: 28,
+          y:
+            footerLineY -
+            9,
+
+          size: 5.7,
+
+          font:
+            regularFont,
+
+          color:
+            rgb(
+              0.28,
+              0.35,
+              0.31
+            ),
+        }
+      );
+
 
       outputDocument.addPage(
         copiedPage
