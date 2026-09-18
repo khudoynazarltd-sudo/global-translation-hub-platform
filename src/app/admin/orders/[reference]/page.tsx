@@ -147,6 +147,47 @@ export default async function AdminOrderDetailsPage({
       .eq("order_id", order.id)
       .maybeSingle();
 
+  const {
+    data: downloadEvents,
+    error: downloadEventsError,
+  } = await supabaseAdmin
+    .from("certificate_download_events")
+    .select(`
+      downloaded_at
+    `)
+    .eq(
+      "order_id",
+      order.id
+    )
+    .order(
+      "downloaded_at",
+      {
+        ascending: true,
+      }
+    );
+
+  if (downloadEventsError) {
+    console.error(
+      "Unable to load certified bundle download activity:",
+      downloadEventsError
+    );
+  }
+
+  const downloadCount =
+    downloadEvents?.length ?? 0;
+
+  const firstDownloadedAt =
+    downloadCount > 0
+      ? downloadEvents?.[0]?.downloaded_at
+      : null;
+
+  const lastDownloadedAt =
+    downloadCount > 0
+      ? downloadEvents?.[
+          downloadCount - 1
+        ]?.downloaded_at
+      : null;
+
 
   const {
     data: translators,
@@ -343,6 +384,69 @@ export default async function AdminOrderDetailsPage({
               enquiry?.email
             }
           />
+
+          <section className="mt-6 rounded-2xl border border-[#dce6df] bg-white p-6 shadow-sm">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <h2 className="text-xl font-bold">
+                  Client Download Activity
+                </h2>
+
+                <p className="mt-2 text-sm leading-6 text-[#65736b]">
+                  Certified translation bundle download activity for this
+                  order.
+                </p>
+              </div>
+
+              <div
+                className={`inline-flex w-fit rounded-full px-4 py-2 text-sm font-semibold ${
+                  downloadCount > 0
+                    ? "bg-[#eaf8f0] text-[#087f5b]"
+                    : "bg-[#f3f5f4] text-[#607067]"
+                }`}
+              >
+                {downloadCount > 0
+                  ? "Downloaded"
+                  : "Not Downloaded"}
+              </div>
+            </div>
+
+            <dl className="mt-6 grid gap-5 sm:grid-cols-3">
+              <Info
+                label="Download Count"
+                value={String(
+                  downloadCount
+                )}
+              />
+
+              <Info
+                label="First Download"
+                value={
+                  firstDownloadedAt
+                    ? new Date(
+                        firstDownloadedAt
+                      ).toLocaleString(
+                        "en-GB"
+                      )
+                    : "Not downloaded"
+                }
+              />
+
+              <Info
+                label="Last Download"
+                value={
+                  lastDownloadedAt
+                    ? new Date(
+                        lastDownloadedAt
+                      ).toLocaleString(
+                        "en-GB"
+                      )
+                    : "Not downloaded"
+                }
+              />
+            </dl>
+          </section>
+
           <CertificateDetails orderId={order.id} />
           {certificate && (
             <CertificateActions
