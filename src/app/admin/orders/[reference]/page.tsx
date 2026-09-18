@@ -289,7 +289,13 @@ export default async function AdminOrderDetailsPage({
                 label="Paid At"
                 value={
                   order.paid_at
-                    ? new Date(order.paid_at).toLocaleString("en-GB")
+                    ? new Date(order.paid_at).toLocaleString(
+                        "en-GB",
+                        {
+                          timeZone:
+                            "Europe/London",
+                        }
+                      )
                     : "Not available"
                 }
               />
@@ -426,7 +432,11 @@ export default async function AdminOrderDetailsPage({
                     ? new Date(
                         firstDownloadedAt
                       ).toLocaleString(
-                        "en-GB"
+                        "en-GB",
+                        {
+                          timeZone:
+                            "Europe/London",
+                        }
                       )
                     : "Not downloaded"
                 }
@@ -439,7 +449,11 @@ export default async function AdminOrderDetailsPage({
                     ? new Date(
                         lastDownloadedAt
                       ).toLocaleString(
-                        "en-GB"
+                        "en-GB",
+                        {
+                          timeZone:
+                            "Europe/London",
+                        }
                       )
                     : "Not downloaded"
                 }
@@ -489,7 +503,13 @@ export default async function AdminOrderDetailsPage({
                 </div>
 
                 <div className="mt-1 text-sm text-[#69766f]">
-                  {new Date(item.created_at).toLocaleString("en-GB")}
+                  {new Date(item.created_at).toLocaleString(
+                    "en-GB",
+                    {
+                      timeZone:
+                        "Europe/London",
+                    }
+                  )}
                 </div>
 
                 {item.notes && (
