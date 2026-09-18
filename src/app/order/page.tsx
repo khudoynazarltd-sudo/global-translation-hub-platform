@@ -216,44 +216,6 @@ function OrderPortalContent() {
             </strong>
           </div>
 
-          {["ready", "delivered"].includes(order.status) &&
-            order.finalDocuments &&
-            order.finalDocuments.length > 0 && (
-              <div className="mt-6 space-y-3">
-                {order.finalDocuments.map((document) => (
-                  <div
-                    key={document.id}
-                    className="flex flex-col gap-3 rounded-xl border border-[#dce6df] bg-white p-4 sm:flex-row sm:items-center sm:justify-between"
-                  >
-                    <div className="font-semibold">
-                      {document.original_filename ||
-                        "Completed Translation"}
-                    </div>
-
-                    <a
-                      href={`/api/client/download?token=${encodeURIComponent(
-                        token!
-                      )}&document=${encodeURIComponent(
-                        document.id
-                      )}`}
-                      className="rounded-lg bg-[#087f5b] px-4 py-2 text-center text-sm font-semibold text-white"
-                    >
-                      Download Translation
-                    </a>
-                  </div>
-                ))}
-              </div>
-            )}
-
-          {["ready", "delivered"].includes(order.status) &&
-            (!order.finalDocuments ||
-              order.finalDocuments.length === 0) && (
-              <div className="mt-6 rounded-xl bg-[#fff4d8] px-4 py-3 text-sm text-[#8a6418]">
-                The order is marked as ready, but no final
-                translation file is currently available.
-              </div>
-            )}
-
           {order.certificate?.bundleAvailable && (
             <div className="mt-6 rounded-2xl border border-[#b9d8c7] bg-[#f3faf6] p-5">
               <div className="text-sm text-[#65736b]">
