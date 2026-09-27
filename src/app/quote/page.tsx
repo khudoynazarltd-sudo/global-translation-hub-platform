@@ -110,6 +110,28 @@ type MediaItem = {
   file: File | null;
 };
 
+function createClientId() {
+  if (
+    typeof globalThis.crypto !==
+      "undefined" &&
+    typeof globalThis.crypto.randomUUID ===
+      "function"
+  ) {
+    return globalThis.crypto.randomUUID();
+  }
+
+  return [
+    Date.now().toString(36),
+    Math.random()
+      .toString(36)
+      .slice(2),
+    Math.random()
+      .toString(36)
+      .slice(2),
+  ].join("-");
+}
+
+
 function formatPrice(value: number) {
   return new Intl.NumberFormat("en-GB", {
     style: "currency",
@@ -137,7 +159,7 @@ export default function QuotePage() {
       (current) => [
         ...current,
         {
-          id: crypto.randomUUID(),
+          id: createClientId(),
           file: null,
           documentType: "",
           label: "",
@@ -179,6 +201,67 @@ export default function QuotePage() {
               : item
         )
     );
+  };
+
+  const handleDocumentFiles = (
+    id: string,
+    files: FileList | null
+  ) => {
+    const selectedFiles =
+      Array.from(
+        files ?? []
+      );
+
+    if (
+      selectedFiles.length === 0
+    ) {
+      updateDocumentFile(
+        id,
+        null
+      );
+
+      return;
+    }
+
+    const [
+      firstFile,
+      ...additionalFiles
+    ] = selectedFiles;
+
+    updateDocumentFile(
+      id,
+      firstFile
+    );
+
+    if (
+      additionalFiles.length > 0
+    ) {
+      setDocumentItems(
+        (current) => [
+          ...current,
+          ...additionalFiles.map(
+            (selectedFile) => ({
+              id: createClientId(),
+              file: selectedFile,
+              documentType: "",
+              label: "",
+              pageCount: "",
+            })
+          ),
+        ]
+      );
+    }
+
+    setDocumentType("");
+    setMediaItems([
+      {
+        id: "media-1",
+        file: null,
+      },
+    ]);
+    setMediaExternalUrl("");
+    setMediaOutputOptions([]);
+    setMediaNotes("");
   };
 
   const updateDocumentType = (
@@ -300,7 +383,7 @@ export default function QuotePage() {
       (current) => [
         ...current,
         {
-          id: crypto.randomUUID(),
+          id: createClientId(),
           file: null,
         },
       ]
@@ -320,7 +403,7 @@ export default function QuotePage() {
           ? remaining
           : [
               {
-                id: crypto.randomUUID(),
+                id: createClientId(),
                 file: null,
               },
             ];
@@ -524,7 +607,7 @@ export default function QuotePage() {
 
     if (!sessionId) {
       sessionId =
-        crypto.randomUUID();
+        createClientId();
 
       window.sessionStorage.setItem(
         sessionIdKey,
@@ -1736,6 +1819,134 @@ async function loadPriceGuide() {
   return (
 
     <main className="min-h-screen bg-[#f6f9f7] text-[#13201a]">
+      <script
+        dangerouslySetInnerHTML={{
+          __html: `
+            (function () {
+              var messages = [];
+
+              function addMessage(message) {
+                messages.push(String(message));
+
+                var debug =
+                  document.getElementById(
+                    "iphone-js-debug"
+                  );
+
+                if (debug) {
+                  debug.textContent =
+                    "iPhone debug: " +
+                    messages.join(" | ");
+                }
+              }
+
+              window.addEventListener(
+                "error",
+                function (event) {
+                  var target =
+                    event.target;
+
+                  if (
+                    target &&
+                    target !== window &&
+                    target.src
+                  ) {
+                    addMessage(
+                      "RESOURCE ERROR: " +
+                      target.src
+                    );
+
+                    return;
+                  }
+
+                  addMessage(
+                    "JS ERROR: " +
+                    (
+                      event.message ||
+                      "unknown"
+                    ) +
+                    " @ " +
+                    (
+                      event.filename ||
+                      "unknown"
+                    ) +
+                    ":" +
+                    (
+                      event.lineno ||
+                      0
+                    )
+                  );
+                },
+                true
+              );
+
+              window.addEventListener(
+                "unhandledrejection",
+                function (event) {
+                  var reason =
+                    event.reason;
+
+                  addMessage(
+                    "PROMISE ERROR: " +
+                    (
+                      reason &&
+                      reason.message
+                        ? reason.message
+                        : String(reason)
+                    )
+                  );
+                }
+              );
+
+              window.addEventListener(
+                "load",
+                function () {
+                  var nextScripts =
+                    document.querySelectorAll(
+                      'script[src*="/_next/"]'
+                    );
+
+                  addMessage(
+                    "RAW JS ACTIVE"
+                  );
+
+                  addMessage(
+                    "NEXT SCRIPTS: " +
+                    nextScripts.length
+                  );
+
+                  setTimeout(
+                    function () {
+                      var button =
+                        Array.from(
+                          document.querySelectorAll(
+                            "button"
+                          )
+                        ).find(
+                          function (item) {
+                            return (
+                              item.textContent ||
+                              ""
+                            ).indexOf(
+                              "Continue with Document"
+                            ) >= 0;
+                          }
+                        );
+
+                      addMessage(
+                        button
+                          ? "BUTTON FOUND"
+                          : "BUTTON NOT FOUND"
+                      );
+                    },
+                    1000
+                  );
+                }
+              );
+            })();
+          `,
+        }}
+      />
       <header className="border-b border-[#dfe8e2] bg-white">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-5">
           <a href="/" className="font-bold tracking-wide text-[#087f5b]">
@@ -1751,70 +1962,86 @@ async function loadPriceGuide() {
         </div>
       </header>
 
-      <div className="mx-auto max-w-4xl px-6 py-14">
-        <div className="mb-10">
-          <div className="text-sm font-semibold uppercase tracking-[0.18em] text-[#087f5b]">
-            Secure Translation Enquiry
+      <div className="mx-auto max-w-4xl px-6 py-8 md:py-14">
+        <div className="mb-5 md:mb-10">
+          <div className="hidden text-sm font-semibold uppercase tracking-[0.18em] text-[#087f5b] md:block">
+            Certified Document Translation
           </div>
 
-          <h1 className="mt-3 text-4xl font-bold tracking-tight">
+          <h1 className="text-2xl font-bold tracking-tight md:mt-3 md:text-4xl">
             Get a Translation Quote
           </h1>
 
-          <p className="mt-4 max-w-2xl leading-7 text-[#607067]">
-            Provide your document details, review your information and submit
-            your enquiry securely.
+          <p className="mt-2 text-sm font-medium text-[#607067] md:hidden">
+            No payment required.
+          </p>
+
+          <p className="mt-4 hidden max-w-2xl leading-7 text-[#607067] md:block">
+            Tell us what you need translated. No payment is required to
+            request a quote.
           </p>
         </div>
 
-        <div className="mb-8 flex gap-2">
-          {[
-            "upload",
-            "language",
-            "document",
-            "purpose",
-            "turnaround",
-            "contact",
-            "review",
-            "result",
-          ].map((item, index) => {
-            const order = [
-              "upload",
-              "language",
-              "document",
-              "purpose",
-              "turnaround",
-              "contact",
-              "review",
-              "result",
-            ];
+        {(() => {
+          const progressStep =
+            step === "upload" || step === "language"
+              ? 1
+              : step === "document" || step === "purpose"
+                ? 2
+                : step === "turnaround" || step === "contact"
+                  ? 3
+                  : 4;
 
-            return (
-              <div
-                key={item}
-                className={`h-2 flex-1 rounded-full ${
-                  order.indexOf(step) >= index
-                    ? "bg-[#087f5b]"
-                    : "bg-[#dfe8e2]"
-                }`}
-              />
-            );
-          })}
-        </div>
+          const progressLabel =
+            progressStep === 1
+              ? "Document"
+              : progressStep === 2
+                ? "Details"
+                : progressStep === 3
+                  ? "Quote"
+                  : "Review";
 
-        <section className="rounded-3xl border border-[#dfe8e2] bg-white p-7 shadow-sm md:p-10">
+          return (
+            <>
+              <div className="mb-4 flex items-center justify-between text-sm font-semibold">
+                <span className="text-[#607067]">
+                  Step {progressStep} of 4
+                </span>
+
+                <span className="text-[#087f5b]">
+                  {progressLabel}
+                </span>
+              </div>
+
+              <div className="mb-8 flex gap-2">
+                {[1, 2, 3, 4].map((item) => (
+                  <div
+                    key={item}
+                    className={`h-2 flex-1 rounded-full ${
+                      progressStep >= item
+                        ? "bg-[#087f5b]"
+                        : "bg-[#dfe8e2]"
+                    }`}
+                  />
+                ))}
+              </div>
+            </>
+          );
+        })()}
+
+        <section className="rounded-3xl border border-[#dfe8e2] bg-white p-4 shadow-sm md:p-10">
           {step === "upload" && (
             <>
-              <h2 className="text-2xl font-bold">
+              <h2 className="hidden text-2xl font-bold md:block">
                 What would you like us to translate?
               </h2>
 
-              <p className="mt-3 leading-7 text-[#607067]">
-                Choose a document translation or continue with an audio or
-                video translation enquiry.
+              <p className="mt-3 hidden leading-7 text-[#607067] md:block">
+                Upload your document to start your quotation, or continue
+                with an audio or video translation enquiry.
               </p>
 
-              <div className="mt-8 rounded-2xl border border-[#b9d8c7] bg-[#f1f8f4] p-6">
+              <div className="mt-8 hidden rounded-2xl border border-[#b9d8c7] bg-[#f1f8f4] p-6 md:block">
                 <div className="text-sm font-semibold uppercase tracking-[0.14em] text-[#087f5b]">
                   Indicative Standard Prices
                 </div>
@@ -1929,7 +2156,7 @@ async function loadPriceGuide() {
                 </p>
               </div>
 
-              <div className="mt-6 rounded-2xl border border-[#dce6df] bg-white p-6">
+              <div className="mt-0 rounded-2xl border border-[#dce6df] bg-white p-4 md:mt-6 md:p-6">
                 <div className="text-sm font-semibold uppercase tracking-[0.14em] text-[#087f5b]">
                   Document Translation
                 </div>
@@ -1938,7 +2165,11 @@ async function loadPriceGuide() {
                   Upload your document
                 </h3>
 
-                <p className="mt-2 leading-7 text-[#607067]">
+                <p className="mt-2 text-sm leading-6 text-[#607067] md:hidden">
+                  PDF, JPG, JPEG or PNG. Clear scans and photographs accepted.
+                </p>
+
+                <p className="mt-2 hidden leading-7 text-[#607067] md:block">
                   Upload a PDF, scan or clear photograph of the document you
                   require us to translate.
                 </p>
@@ -1971,90 +2202,33 @@ async function loadPriceGuide() {
                           )}
                         </div>
 
-                        <label className="mt-4 block cursor-pointer rounded-xl border-2 border-dashed border-[#bed2c5] bg-white p-6 text-center transition hover:border-[#087f5b]">
+                        <div className="mt-4 rounded-xl border-2 border-dashed border-[#bed2c5] bg-white p-4 md:p-6">
                           <input
                             type="file"
                             multiple
-                            accept=".pdf,.jpg,.jpeg,.png"
-                            className="hidden"
+                            accept="application/pdf,image/jpeg,image/png"
+                            data-document-id={item.id}
+                            data-document-file-input="true"
                             onChange={(event) => {
-                              const selectedFiles =
-                                Array.from(
-                                  event.target.files ?? []
-                                );
-
-                              if (
-                                selectedFiles.length === 0
-                              ) {
-                                updateDocumentFile(
-                                  item.id,
-                                  null
-                                );
-                                return;
-                              }
-
-                              setDocumentItems(
-                                (current) => {
-                                  const currentIndex =
-                                    current.findIndex(
-                                      (currentItem) =>
-                                        currentItem.id === item.id
-                                    );
-
-                                  if (currentIndex < 0) {
-                                    return current;
-                                  }
-
-                                  const replacementItems =
-                                    selectedFiles.map(
-                                      (selectedFile, fileIndex) =>
-                                        fileIndex === 0
-                                          ? {
-                                              ...current[currentIndex],
-                                              file: selectedFile,
-                                            }
-                                          : {
-                                              id: crypto.randomUUID(),
-                                              file: selectedFile,
-                                              documentType: "",
-                                              label: "",
-                                              pageCount: "",
-                                            }
-                                    );
-
-                                  return [
-                                    ...current.slice(0, currentIndex),
-                                    ...replacementItems,
-                                    ...current.slice(currentIndex + 1),
-                                  ];
-                                }
+                              handleDocumentFiles(
+                                item.id,
+                                event.currentTarget.files
                               );
-
-                              setDocumentType("");
-                              setMediaItems([
-                                {
-                                  id: "media-1",
-                                  file: null,
-                                },
-                              ]);
-                              setMediaExternalUrl("");
-                              setMediaOutputOptions([]);
-                              setMediaNotes("");
-
-                              event.target.value = "";
                             }}
+                            className="block w-full text-sm text-[#173025] file:mr-4 file:rounded-lg file:border-0 file:bg-[#087f5b] file:px-4 file:py-2 file:font-semibold file:text-white"
                           />
 
-                          <div className="font-semibold text-[#173025]">
+
+                          <div className="mt-3 font-semibold text-[#173025]">
                             {item.file
                               ? item.file.name
-                              : "Choose one or multiple PDF, JPG, JPEG or PNG files"}
+                              : "No file selected"}
                           </div>
 
                           <p className="mt-2 text-sm text-[#69766f]">
-                            You can select several files at once. Maximum file size: 15 MB per file.
+                            PDF, JPG, JPEG or PNG. Maximum file size: 15 MB per file.
                           </p>
-                        </label>
+                        </div>
 
                         <div className="mt-4 grid gap-4 sm:grid-cols-2">
                           <div>
@@ -2146,6 +2320,7 @@ async function loadPriceGuide() {
                 </div>
 
                 <button
+                  type="button"
                   disabled={
                     !documentItems.some(
                       (item) => item.file !== null
@@ -2432,7 +2607,7 @@ async function loadPriceGuide() {
                             onChange={(event) => {
                               const selectedFiles =
                                 Array.from(
-                                  event.target.files ?? []
+                                  event.currentTarget.files ?? []
                                 );
 
                               if (selectedFiles.length === 0) {
@@ -2464,7 +2639,7 @@ async function loadPriceGuide() {
                                               file: selectedFile,
                                             }
                                           : {
-                                              id: crypto.randomUUID(),
+                                              id: createClientId(),
                                               file: selectedFile,
                                             }
                                     );
@@ -2477,7 +2652,7 @@ async function loadPriceGuide() {
                                 }
                               );
 
-                              event.target.value = "";
+
                             }}
                             className="mt-3 block w-full rounded-xl border border-[#d7e1da] bg-white p-3"
                           />
