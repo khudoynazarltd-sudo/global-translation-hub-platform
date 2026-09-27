@@ -18,7 +18,7 @@ export const DOCUMENT_TYPES = [
   "Birth Certificate",
   "Marriage Certificate",
   "Police Certificate",
-  "Passport / ID",
+  "Passport",
   "Diploma / Academic Certificate",
   "Academic Transcript",
   "Legal Document",
@@ -50,7 +50,7 @@ const BASE_PRICES: Record<string, number> = {
   "Birth Certificate": 35,
   "Marriage Certificate": 35,
   "Police Certificate": 35,
-  "Passport / ID": 30,
+  "Passport": 30,
   "Diploma / Academic Certificate": 35,
 };
 

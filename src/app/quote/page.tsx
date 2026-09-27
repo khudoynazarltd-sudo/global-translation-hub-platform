@@ -35,7 +35,7 @@ const documentTypes = [
   "Birth Certificate",
   "Marriage Certificate",
   "Police Certificate",
-  "Passport / ID",
+  "Passport",
   "Diploma / Academic Certificate",
   "Academic Transcript",
   "Legal Document",
@@ -2042,11 +2042,11 @@ async function loadPriceGuide() {
               </p>
 
               <div className="mt-8 hidden rounded-2xl border border-[#b9d8c7] bg-[#f1f8f4] p-6 md:block">
-                <div className="text-sm font-semibold uppercase tracking-[0.14em] text-[#087f5b]">
+                <div className="hidden text-sm font-semibold uppercase tracking-[0.14em] text-[#087f5b] md:block">
                   Indicative Standard Prices
                 </div>
 
-                <h3 className="mt-2 text-xl font-bold">
+                <h3 className="text-xl font-bold md:mt-2">
                   Check the price before uploading
                 </h3>
 
@@ -2157,11 +2157,11 @@ async function loadPriceGuide() {
               </div>
 
               <div className="mt-0 rounded-2xl border border-[#dce6df] bg-white p-4 md:mt-6 md:p-6">
-                <div className="text-sm font-semibold uppercase tracking-[0.14em] text-[#087f5b]">
+                <div className="hidden text-sm font-semibold uppercase tracking-[0.14em] text-[#087f5b] md:block">
                   Document Translation
                 </div>
 
-                <h3 className="mt-2 text-xl font-bold">
+                <h3 className="text-xl font-bold md:mt-2">
                   Upload your document
                 </h3>
 
@@ -2175,12 +2175,12 @@ async function loadPriceGuide() {
                 </p>
 
 
-                <div className="mt-6 space-y-5">
+                <div className="mt-5 space-y-4 md:mt-6 md:space-y-5">
                   {documentItems.map(
                     (item, index) => (
                       <div
                         key={item.id}
-                        className="rounded-2xl border border-[#dce6df] bg-[#f8fbf9] p-5"
+                        className="p-0 md:rounded-2xl md:border md:border-[#dce6df] md:bg-[#f8fbf9] md:p-5"
                       >
                         <div className="flex items-center justify-between gap-4">
                           <div className="font-semibold text-[#173025]">
@@ -2202,7 +2202,7 @@ async function loadPriceGuide() {
                           )}
                         </div>
 
-                        <div className="mt-4 rounded-xl border-2 border-dashed border-[#bed2c5] bg-white p-4 md:p-6">
+                        <div className="mt-3 rounded-xl border-2 border-dashed border-[#bed2c5] bg-white p-3 md:mt-4 md:p-6">
                           <input
                             type="file"
                             multiple
@@ -2225,12 +2225,12 @@ async function loadPriceGuide() {
                               : "No file selected"}
                           </div>
 
-                          <p className="mt-2 text-sm text-[#69766f]">
+                          <p className="mt-2 hidden text-sm text-[#69766f] md:block">
                             PDF, JPG, JPEG or PNG. Maximum file size: 15 MB per file.
                           </p>
                         </div>
 
-                        <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                        <div className="mt-4 hidden gap-4 md:grid md:grid-cols-2">
                           <div>
                             <label className="mb-2 block text-sm font-semibold">
                               Document Type
@@ -2288,7 +2288,7 @@ async function loadPriceGuide() {
                           </div>
                         </div>
 
-                        <div className="mt-4">
+                        <div className="mt-4 hidden md:block">
                           <label className="mb-2 block text-sm font-semibold">
                             Description / Notes
                           </label>
@@ -2313,7 +2313,7 @@ async function loadPriceGuide() {
                   <button
                     type="button"
                     onClick={addDocumentItem}
-                    className="rounded-lg border border-[#087f5b] bg-white px-5 py-3 font-semibold text-[#087f5b] hover:bg-[#eef8f2]"
+                    className="w-full rounded-lg border border-[#087f5b] bg-white px-5 py-3 font-semibold text-[#087f5b] hover:bg-[#eef8f2] md:w-auto"
                   >
                     + Add another document
                   </button>
@@ -2329,7 +2329,7 @@ async function loadPriceGuide() {
                   onClick={() =>
                     goTo("language")
                   }
-                  className="mt-6 rounded-lg bg-[#087f5b] px-6 py-3 font-semibold text-white disabled:cursor-not-allowed disabled:opacity-40"
+                  className="mt-4 w-full rounded-lg bg-[#087f5b] px-6 py-3 font-semibold text-white disabled:cursor-not-allowed disabled:opacity-40 md:mt-6 md:w-auto"
                 >
                   Continue with Document
                 </button>
@@ -2348,28 +2348,35 @@ async function loadPriceGuide() {
 
 
               <div className="rounded-2xl border border-[#b9d8c7] bg-[#f1f8f4] p-6">
-                <div className="text-sm font-semibold uppercase tracking-[0.14em] text-[#087f5b]">
+                <div className="hidden text-sm font-semibold uppercase tracking-[0.14em] text-[#087f5b] md:block">
                   Audio & Video Translation
                 </div>
 
-                <h3 className="mt-2 text-xl font-bold">
-                  Translate audio or video content
+                <h3 className="text-lg font-bold md:mt-2 md:text-xl">
+                  Translate audio or video
+                  <span className="hidden md:inline"> content</span>
                 </h3>
 
-                <p className="mt-3 leading-7 text-[#607067]">
-                  We can translate audio and video content and provide a
-                  written transcript and translation, certified written
-                  translation, subtitles, or translation for voiceover and
-                  audio overlay.
+                <p className="mt-2 text-sm leading-5 text-[#607067] md:hidden">
+                  Upload files up to 50 MB, or provide a secure link for larger files.
                 </p>
 
-                <p className="mt-3 leading-7 text-[#607067]">
-                  Files up to 50 MB may be uploaded securely through the
-                  website. For larger files, you can provide a secure Google
-                  Drive, Dropbox, OneDrive or WeTransfer link.
-                </p>
+                <div className="hidden md:block">
+                  <p className="mt-3 leading-7 text-[#607067]">
+                    We can translate audio and video content and provide a
+                    written transcript and translation, certified written
+                    translation, subtitles, or translation for voiceover and
+                    audio overlay.
+                  </p>
 
-                <div className="mt-5 flex flex-wrap gap-2 text-sm">
+                  <p className="mt-3 leading-7 text-[#607067]">
+                    Files up to 50 MB may be uploaded securely through the
+                    website. For larger files, you can provide a secure Google
+                    Drive, Dropbox, OneDrive or WeTransfer link.
+                  </p>
+                </div>
+
+                <div className="mt-3 flex flex-wrap gap-1.5 text-xs md:mt-5 md:gap-2 md:text-sm">
                   {[
                     "Transcript & Translation",
                     "Certified Written Translation",
@@ -2379,7 +2386,7 @@ async function loadPriceGuide() {
                     (item) => (
                       <span
                         key={item}
-                        className="rounded-full border border-[#cfe4d8] bg-white px-3 py-2 text-[#315244]"
+                        className="rounded-full border border-[#cfe4d8] bg-white px-2.5 py-1.5 leading-4 text-[#315244] md:px-3 md:py-2"
                       >
                         {item}
                       </span>
@@ -2387,7 +2394,7 @@ async function loadPriceGuide() {
                   )}
                 </div>
 
-                <p className="mt-5 text-sm font-medium text-[#536259]">
+                <p className="mt-3 text-xs font-medium text-[#536259] md:mt-5 md:text-sm">
                   Audio and video services are reviewed and quoted
                   individually.
                 </p>
@@ -2413,7 +2420,7 @@ async function loadPriceGuide() {
                       "language"
                     );
                   }}
-                  className="mt-6 rounded-lg bg-[#087f5b] px-6 py-3 font-semibold text-white transition hover:bg-[#066a4c]"
+                  className="mt-4 w-full rounded-lg bg-[#087f5b] px-5 py-3 font-semibold text-white transition hover:bg-[#066a4c] md:mt-6 md:w-auto md:px-6"
                 >
                   Continue with Audio / Video
                 </button>
@@ -2431,7 +2438,7 @@ async function loadPriceGuide() {
                   : "What language is the source document written in?"}
               </p>
 
-              <div className="mt-6 grid gap-3 sm:grid-cols-2">
+              <div className="mt-5 grid grid-cols-2 gap-2 sm:mt-6 sm:gap-3">
                 {[
                   ...(
                     pricingOptions?.languages.map(
@@ -2452,7 +2459,7 @@ async function loadPriceGuide() {
                     key={language}
 
                     onClick={() => setSourceLanguage(language)}
-                    className={`rounded-xl border px-5 py-4 text-left font-medium ${
+                    className={`min-h-14 rounded-xl border px-4 py-3 text-left text-sm font-medium leading-5 sm:min-h-0 sm:px-5 sm:py-4 sm:text-base ${
                       sourceLanguage === language
                         ? "border-[#087f5b] bg-[#eef8f2] text-[#087f5b]"
                         : "border-[#dce6df] hover:border-[#9db9a8]"
@@ -2493,10 +2500,10 @@ async function loadPriceGuide() {
                 </p>
               )}
 
-              <div className="mt-8 flex gap-3">
+              <div className="mt-5 flex gap-3 md:mt-8">
                 <button
                   onClick={() => goTo("upload")}
-                  className="rounded-lg border border-[#cbd7cf] px-6 py-3 font-semibold"
+                  className="flex-1 rounded-lg border border-[#cbd7cf] px-5 py-3 font-semibold md:flex-none md:px-6"
                 >
                   Back
                 </button>
@@ -2522,7 +2529,7 @@ async function loadPriceGuide() {
                       "document"
                     );
                   }}
-                  className="rounded-lg bg-[#087f5b] px-6 py-3 font-semibold text-white disabled:opacity-40"
+                  className="flex-1 rounded-lg bg-[#087f5b] px-4 py-2.5 font-semibold text-white disabled:opacity-40 md:flex-none md:px-6 md:py-3"
                 >
                   Continue
                 </button>
@@ -2532,20 +2539,20 @@ async function loadPriceGuide() {
 
           {step === "document" && (
             <>
-              <h2 className="text-2xl font-bold">
+              <h2 className="text-xl font-bold md:text-2xl">
                 {isMediaService
                   ? "Upload Audio / Video"
                   : "Document type"}
               </h2>
               {!isMediaService && (
-                <div className="mt-6 grid gap-3 sm:grid-cols-2">
+                <div className="mt-4 grid grid-cols-2 gap-1.5 sm:mt-6 sm:gap-3">
                   {availableDocumentTypes.map((item) => (
                     <button
                       key={item}
                       onClick={() =>
                         setDocumentType(item)
                       }
-                      className={`rounded-xl border px-5 py-4 text-left font-medium ${
+                      className={`min-h-12 rounded-xl border px-3 py-2.5 text-left text-sm font-medium leading-5 sm:min-h-0 sm:px-5 sm:py-4 sm:text-base ${
                         documentType === item
                           ? "border-[#087f5b] bg-[#eef8f2] text-[#087f5b]"
                           : "border-[#dce6df] hover:border-[#9db9a8]"
@@ -2557,20 +2564,20 @@ async function loadPriceGuide() {
                 </div>
               )}
               {isMediaService && (
-                <div className="mt-6 rounded-2xl border border-[#cfe4d8] bg-[#f8fbf9] p-6">
+                <div className="mt-4 rounded-2xl border border-[#cfe4d8] bg-[#f8fbf9] p-4 md:mt-6 md:p-6">
 
-                  <h3 className="text-xl font-bold">
+                  <h3 className="text-lg font-bold md:text-xl">
                     Provide your audio or video file
                   </h3>
 
-                  <p className="mt-2 text-sm leading-6 text-[#607067]">
+                  <p className="mt-2 text-sm leading-5 text-[#607067] md:leading-6">
                     Upload your audio or video file securely if it is up to 50 MB.
                     For larger files, provide a secure Google Drive, Dropbox,
                     OneDrive or WeTransfer link instead.
                   </p>
 
-                  <div className="mt-6 space-y-4">
-                    <div className="text-sm font-semibold">
+                  <div className="mt-4 space-y-3 md:mt-6 md:space-y-4">
+                    <div className="hidden text-sm font-semibold md:block">
                       Audio / Video files
                     </div>
 
@@ -2578,7 +2585,7 @@ async function loadPriceGuide() {
                       (item, index) => (
                         <div
                           key={item.id}
-                          className="rounded-xl border border-[#d7e1da] bg-white p-4"
+                          className="rounded-xl border border-[#d7e1da] bg-white p-3 md:p-4"
                         >
                           <div className="flex items-center justify-between gap-4">
                             <div className="text-sm font-semibold text-[#173025]">
@@ -2654,7 +2661,7 @@ async function loadPriceGuide() {
 
 
                             }}
-                            className="mt-3 block w-full rounded-xl border border-[#d7e1da] bg-white p-3"
+                            className="mt-2 block w-full rounded-xl border border-[#d7e1da] bg-white p-2.5 md:mt-3 md:p-3"
                           />
 
                           {item.file && (
@@ -2678,7 +2685,7 @@ async function loadPriceGuide() {
                     <button
                       type="button"
                       onClick={addMediaItem}
-                      className="rounded-lg border border-[#087f5b] bg-white px-5 py-3 font-semibold text-[#087f5b] hover:bg-[#eef8f2]"
+                      className="w-full rounded-lg border border-[#087f5b] bg-white px-5 py-3 font-semibold text-[#087f5b] hover:bg-[#eef8f2] md:w-auto"
                     >
                       + Add another audio / video file
                     </button>
@@ -2716,7 +2723,7 @@ async function loadPriceGuide() {
 
 
                   <div className="mt-7">
-                    <div className="text-sm font-semibold">
+                    <div className="hidden text-sm font-semibold md:block">
                       Required Output
                     </div>
 
@@ -2783,10 +2790,10 @@ async function loadPriceGuide() {
                 </div>
               )}
 
-              <div className="mt-8 flex gap-3">
+              <div className="mt-4 flex gap-2 md:mt-8 md:gap-3">
                 <button
                   onClick={() => goTo("language")}
-                  className="rounded-lg border border-[#cbd7cf] px-6 py-3 font-semibold"
+                  className="flex-1 rounded-lg border border-[#cbd7cf] px-4 py-2.5 font-semibold md:flex-none md:px-6 md:py-3"
                 >
                   Back
                 </button>
@@ -2794,7 +2801,7 @@ async function loadPriceGuide() {
                 <button
                   disabled={!documentType}
                   onClick={() => goTo("purpose")}
-                  className="rounded-lg bg-[#087f5b] px-6 py-3 font-semibold text-white disabled:opacity-40"
+                  className="flex-1 rounded-lg bg-[#087f5b] px-4 py-2.5 font-semibold text-white disabled:opacity-40 md:flex-none md:px-6 md:py-3"
                 >
                   Continue
                 </button>
@@ -2804,16 +2811,16 @@ async function loadPriceGuide() {
 
           {step === "purpose" && (
             <>
-              <h2 className="text-2xl font-bold">
+              <h2 className="text-xl font-bold leading-6 md:text-2xl md:leading-normal">
                 What will the translation be used for?
               </h2>
 
-              <div className="mt-6 grid gap-3 sm:grid-cols-2">
+              <div className="mt-4 grid grid-cols-2 gap-1.5 sm:mt-6 sm:gap-3">
                 {purposes.map((item) => (
                   <button
                     key={item}
                     onClick={() => setPurpose(item)}
-                    className={`rounded-xl border px-5 py-4 text-left font-medium ${
+                    className={`min-h-12 rounded-xl border px-3 py-2.5 text-left text-sm font-medium leading-5 sm:min-h-0 sm:px-5 sm:py-4 sm:text-base ${
                       purpose === item
                         ? "border-[#087f5b] bg-[#eef8f2] text-[#087f5b]"
                         : "border-[#dce6df] hover:border-[#9db9a8]"
@@ -2824,10 +2831,10 @@ async function loadPriceGuide() {
                 ))}
               </div>
 
-              <div className="mt-8 flex gap-3">
+              <div className="mt-4 flex gap-2 md:mt-8 md:gap-3">
                 <button
                   onClick={() => goTo("document")}
-                  className="rounded-lg border border-[#cbd7cf] px-6 py-3 font-semibold"
+                  className="flex-1 rounded-lg border border-[#cbd7cf] px-4 py-2.5 font-semibold md:flex-none md:px-6 md:py-3"
                 >
                   Back
                 </button>
@@ -2835,7 +2842,7 @@ async function loadPriceGuide() {
                 <button
                   disabled={!purpose}
                   onClick={() => goTo("turnaround")}
-                  className="rounded-lg bg-[#087f5b] px-6 py-3 font-semibold text-white disabled:opacity-40"
+                  className="flex-1 rounded-lg bg-[#087f5b] px-4 py-2.5 font-semibold text-white disabled:opacity-40 md:flex-none md:px-6 md:py-3"
                 >
                   Continue
                 </button>
@@ -2850,7 +2857,7 @@ async function loadPriceGuide() {
               </h2>
 
 
-              <div className="mt-5 rounded-2xl border border-[#dce6df] bg-[#fafcfb] p-5">
+              <div className="mt-4 rounded-2xl border border-[#dce6df] bg-[#fafcfb] p-4 md:mt-5 md:p-5">
 
                 <div className="text-sm text-[#65736b]">
                   Current quotation
@@ -2876,7 +2883,7 @@ async function loadPriceGuide() {
 
                   </div>
                 ) : quotePreview.amount != null ? (
-                  <div className="mt-2 text-3xl font-bold text-[#087f5b]">
+                  <div className="mt-1 text-2xl font-bold text-[#087f5b] md:mt-2 md:text-3xl">
                     {formatPrice(
                       quotePreview.amount
                     )}
@@ -2890,12 +2897,12 @@ async function loadPriceGuide() {
               </div>
 
 
-              <div className="mt-7 space-y-3">
+              <div className="mt-4 space-y-2 md:mt-7 md:space-y-3">
                 {turnaroundOptions.map((option) => (
                   <button
                     key={option}
                     onClick={() => setTurnaround(option)}
-                    className={`w-full rounded-xl border p-5 text-left ${
+                    className={`w-full rounded-xl border p-4 text-left md:p-5 ${
                       turnaround === option
                         ? "border-[#087f5b] bg-[#eef8f2]"
                         : "border-[#dce6df]"
@@ -2903,7 +2910,7 @@ async function loadPriceGuide() {
                   >
                     <div className="font-semibold">{option}</div>
 
-                    <div className="mt-1 text-sm text-[#65736b]">
+                    <div className="mt-1 text-sm leading-5 text-[#65736b]">
                       {option === "Standard" &&
                         "Standard turnaround: up to 3 working days."}
 
@@ -2917,17 +2924,17 @@ async function loadPriceGuide() {
                 ))}
               </div>
 
-              <div className="mt-8 flex gap-3">
+              <div className="mt-5 flex gap-3 md:mt-8">
                 <button
                   onClick={() => goTo("purpose")}
-                  className="rounded-lg border border-[#cbd7cf] px-6 py-3 font-semibold"
+                  className="flex-1 rounded-lg border border-[#cbd7cf] px-5 py-3 font-semibold md:flex-none md:px-6"
                 >
                   Back
                 </button>
 
                 <button
                   onClick={() => goTo("contact")}
-                  className="rounded-lg bg-[#087f5b] px-6 py-3 font-semibold text-white"
+                  className="flex-1 rounded-lg bg-[#087f5b] px-5 py-3 font-semibold text-white md:flex-none md:px-6"
                 >
                   Continue
                 </button>
@@ -2937,11 +2944,11 @@ async function loadPriceGuide() {
 
           {step === "contact" && (
             <>
-              <h2 className="text-2xl font-bold">Your details</h2>
+              <h2 className="text-lg font-bold md:text-2xl">Your details</h2>
 
-              <div className="mt-7 space-y-5">
+              <div className="mt-4 space-y-3 md:mt-7 md:space-y-5">
                 <div>
-                  <label className="mb-2 block font-semibold">
+                  <label className="mb-1 block text-sm font-semibold md:mb-2 md:text-base">
                     Full name
                   </label>
 
@@ -2950,12 +2957,12 @@ async function loadPriceGuide() {
                     onChange={(event) =>
                       setFullName(event.target.value)
                     }
-                    className="w-full rounded-xl border border-[#d7e1da] px-4 py-4 outline-none focus:border-[#087f5b]"
+                    className="w-full rounded-xl border border-[#d7e1da] px-4 py-2.5 outline-none focus:border-[#087f5b] md:py-4"
                   />
                 </div>
 
                 <div>
-                  <label className="mb-2 block font-semibold">
+                  <label className="mb-1 block text-sm font-semibold md:mb-2 md:text-base">
                     Email
                   </label>
 
@@ -2976,11 +2983,11 @@ async function loadPriceGuide() {
                     disabled={
                       emailVerified
                     }
-                    className="w-full rounded-xl border border-[#d7e1da] px-4 py-4 outline-none focus:border-[#087f5b]"
+                    className="w-full rounded-xl border border-[#d7e1da] px-4 py-2.5 outline-none focus:border-[#087f5b] md:py-4"
                   />
 
                   {!emailVerified && (
-                    <div className="mt-3">
+                    <div className="mt-1.5 md:mt-3">
                       {!emailVerificationId ? (
                         <button
                           type="button"
@@ -2991,7 +2998,7 @@ async function loadPriceGuide() {
                           onClick={
                             sendEmailVerification
                           }
-                          className="rounded-lg border border-[#087f5b] px-5 py-3 text-sm font-semibold text-[#087f5b] disabled:cursor-not-allowed disabled:opacity-40"
+                          className="rounded-lg border border-[#087f5b] px-3.5 py-2 text-sm font-semibold text-[#087f5b] disabled:cursor-not-allowed disabled:opacity-40 md:px-5 md:py-3"
                         >
                           {emailVerificationSending
                             ? "Sending code..."
@@ -3094,7 +3101,7 @@ async function loadPriceGuide() {
                 </div>
 
                 <div>
-                  <label className="mb-2 block font-semibold">
+                  <label className="mb-1 block text-sm font-semibold md:mb-2 md:text-base">
                     Telephone number
                   </label>
 
@@ -3103,7 +3110,7 @@ async function loadPriceGuide() {
                     onChange={(event) =>
                       setTelephone(event.target.value)
                     }
-                    className="w-full rounded-xl border border-[#d7e1da] px-4 py-4 outline-none focus:border-[#087f5b]"
+                    className="w-full rounded-xl border border-[#d7e1da] px-4 py-2.5 outline-none focus:border-[#087f5b] md:py-4"
                   />
                 </div>
               </div>
@@ -3159,10 +3166,10 @@ async function loadPriceGuide() {
                 </label>
               </div>
 
-              <div className="mt-8 flex gap-3">
+              <div className="mt-5 flex gap-3 md:mt-8">
                 <button
                   onClick={() => goTo("turnaround")}
-                  className="rounded-lg border border-[#cbd7cf] px-6 py-3 font-semibold"
+                  className="flex-1 rounded-lg border border-[#cbd7cf] px-5 py-3 font-semibold md:flex-none md:px-6"
                 >
                   Back
                 </button>
@@ -3185,13 +3192,17 @@ async function loadPriceGuide() {
             </>
           )}
 
-          {step === "review" && (
+{step === "review" && (
             <>
               <h2 className="text-2xl font-bold">
                 Review your details
               </h2>
 
-              <p className="mt-3 leading-7 text-[#607067]">
+              <p className="mt-2 text-sm leading-5 text-[#607067] md:hidden">
+                Check your details before submitting.
+              </p>
+
+              <p className="mt-3 hidden leading-7 text-[#607067] md:block">
                 {isMediaService
                   ? mediaItems.some(
                       (item) => item.file !== null
@@ -3200,7 +3211,7 @@ async function loadPriceGuide() {
                     : "Please check your information before submitting your enquiry."
                   : "Please check your information before submitting. Your documents will only be uploaded after you press Submit Enquiry."}
               </p>
-              <div className="mt-8 divide-y divide-[#e5ebe7] rounded-2xl border border-[#dce6df]">
+              <div className="mt-4 divide-y divide-[#e5ebe7] rounded-2xl border border-[#dce6df] md:mt-8">
                 <ReviewRow
                   label={
                     isMediaService
@@ -3212,7 +3223,7 @@ async function loadPriceGuide() {
                 />
                 <ReviewRow
                   label="Language"
-                  value={`${sourceLanguage} → ${targetLanguage}`}
+                  value={[sourceLanguage, targetLanguage].join(" \u2192 ")}
                   onEdit={() => goTo("language")}
                 />
 
@@ -3230,7 +3241,7 @@ async function loadPriceGuide() {
 
                 <ReviewRow
                   label="Client"
-                  value={`${fullName} · ${email}`}
+                  value={[fullName, email].join(" \u00B7 ")}
                   onEdit={() => goTo("contact")}
                 />
 
@@ -3239,12 +3250,12 @@ async function loadPriceGuide() {
                     {mediaItems.some(
                       (item) => item.file !== null
                     ) && (
-                      <div className="px-5 py-5">
-                        <div className="text-sm text-[#65736b]">
+                      <div className="px-4 py-3 md:px-5 md:py-5">
+                        <div className="text-xs text-[#65736b] md:text-sm">
                           Media files
                         </div>
 
-                        <div className="mt-3 space-y-3">
+                        <div className="mt-2 space-y-2 md:mt-3 md:space-y-3">
                           {mediaItems
                             .filter(
                               (item) => item.file !== null
@@ -3252,7 +3263,7 @@ async function loadPriceGuide() {
                             .map((item, index) => (
                               <div
                                 key={item.id}
-                                className="rounded-xl border border-[#dce6df] bg-[#f8fbf9] p-4"
+                                className="rounded-xl border border-[#dce6df] bg-[#f8fbf9] p-3 md:p-4"
                               >
                                 <div className="font-semibold">
                                   {index + 1}. {item.file?.name}
@@ -3303,12 +3314,12 @@ async function loadPriceGuide() {
                     )}
                   </>
                 ) : (
-                  <div className="px-5 py-5">
-                    <div className="text-sm text-[#65736b]">
+                  <div className="px-4 py-3 md:px-5 md:py-5">
+                    <div className="text-xs text-[#65736b] md:text-sm">
                       Documents
                     </div>
 
-                    <div className="mt-3 space-y-3">
+                    <div className="mt-2 space-y-2 md:mt-3 md:space-y-3">
                       {documentItems
                         .filter(
                           (item) => item.file !== null
@@ -3316,7 +3327,7 @@ async function loadPriceGuide() {
                         .map((item, index) => (
                           <div
                             key={item.id}
-                            className="rounded-xl border border-[#dce6df] bg-[#f8fbf9] p-4"
+                            className="rounded-xl border border-[#dce6df] bg-[#f8fbf9] p-3 md:p-4"
                           >
                             <div className="font-semibold">
                               {index + 1}. {item.file?.name}
@@ -3411,27 +3422,37 @@ async function loadPriceGuide() {
                 </>
               ) : (
                 <>
-                  <div className="inline-flex rounded-full bg-[#eaf8f0] px-4 py-2 text-sm font-semibold text-[#087f5b]">
+                  <div className="inline-flex rounded-full bg-[#eaf8f0] px-3 py-1.5 text-xs font-semibold text-[#087f5b] md:px-4 md:py-2 md:text-sm">
                     Quotation Available
                   </div>
 
-                  <h2 className="mt-5 text-3xl font-bold">
-                    Your translation quotation
+                  <h2 className="mt-3 text-2xl font-bold md:mt-5 md:text-3xl">
+                    <span className="md:hidden">
+                      Your quotation
+                    </span>
+                    <span className="hidden md:inline">
+                      Your translation quotation
+                    </span>
                   </h2>
 
-                  <div className="mt-8 rounded-2xl border border-[#dae6de] bg-[#f9fbfa] p-6">
-                    <div className="text-sm text-[#66736c]">
+                  <div className="mt-4 rounded-2xl border border-[#dae6de] bg-[#f9fbfa] p-4 md:mt-8 md:p-6">
+                    <div className="text-xs text-[#66736c] md:text-sm">
                       Indicative total
                     </div>
 
-                    <div className="mt-1 text-4xl font-bold text-[#087f5b]">
+                    <div className="mt-1 text-3xl font-bold text-[#087f5b] md:text-4xl">
                       {typeof result.amount === "number"
                         ? formatPrice(result.amount)
                         : "Manual review"}
                     </div>
 
-                    <p className="mt-4 text-sm leading-6 text-[#66736c]">
-                      Your document is stored temporarily while you decide whether to proceed.
+                    <p className="mt-2 text-sm leading-5 text-[#66736c] md:mt-4 md:leading-6">
+                      <span className="md:hidden">
+                        Stored temporarily until you decide whether to proceed.
+                      </span>
+                      <span className="hidden md:inline">
+                        Your document is stored temporarily while you decide whether to proceed.
+                      </span>
                     </p>
                   </div>
 
@@ -3444,7 +3465,7 @@ async function loadPriceGuide() {
                   <button
                     onClick={proceedToPayment}
                     disabled={submitting || !result.enquiryId}
-                    className="mt-6 rounded-lg bg-[#087f5b] px-6 py-4 font-semibold text-white transition hover:bg-[#066a4c] disabled:cursor-not-allowed disabled:opacity-40"
+                    className="mt-4 w-full rounded-lg bg-[#087f5b] px-5 py-3 font-semibold text-white transition hover:bg-[#066a4c] disabled:cursor-not-allowed disabled:opacity-40 md:mt-6 md:w-auto md:px-6 md:py-4"
                   >
                     {submitting
                       ? "Opening secure payment..."
@@ -3452,21 +3473,26 @@ async function loadPriceGuide() {
                   </button>
 
 
-                  <div className="mt-8 rounded-xl border border-[#cfe1d6] bg-[#f4faf6] p-5">
-                    <strong>Next stage:</strong> we will connect secure
-                    payment. An official GLOBAL TRANSLATION HUB order number
-                    will only be created after payment has been confirmed.
+                  <div className="mt-4 rounded-xl border border-[#cfe1d6] bg-[#f4faf6] p-4 text-sm leading-5 md:mt-8 md:p-5 md:text-base md:leading-normal">
+                    <span className="md:hidden">
+                      <strong>Next:</strong> continue to secure payment. Your order number is created after payment is confirmed.
+                    </span>
+                    <span className="hidden md:inline">
+                      <strong>Next stage:</strong> we will connect secure
+                      payment. An official GLOBAL TRANSLATION HUB order number
+                      will only be created after payment has been confirmed.
+                    </span>
                   </div>
                 </>
               )}
 
-              <div className="mt-8 rounded-2xl border border-[#e1e7e3] p-6">
+              <div className="mt-4 rounded-2xl border border-[#e1e7e3] p-4 md:mt-8 md:p-6">
                 <h3 className="font-bold">Submitted enquiry</h3>
 
                 <p className="mt-3 text-sm leading-6 text-[#607067]">
                   Document: {documentType}
                   <br />
-                  Language: {sourceLanguage} → {targetLanguage}
+                  Language: {sourceLanguage} {"\u2192"} {targetLanguage}
                   <br />
                   Purpose: {purpose}
                   <br />
@@ -3527,10 +3553,10 @@ function ReviewRow({
   onEdit: () => void;
 }) {
   return (
-    <div className="flex items-center justify-between gap-5 p-5">
+    <div className="flex items-center justify-between gap-3 px-4 py-3 md:gap-5 md:p-5">
       <div>
-        <div className="text-sm text-[#6a776f]">{label}</div>
-        <div className="mt-1 font-semibold">{value}</div>
+        <div className="text-xs text-[#6a776f] md:text-sm">{label}</div>
+        <div className="mt-0.5 text-sm font-semibold md:mt-1 md:text-base">{value}</div>
       </div>
 
       <button
